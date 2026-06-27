@@ -1,0 +1,41 @@
+services:
+  neo4j:
+    image: neo4j:5.26-community
+    container_name: shixun-neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/medical123
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_server_memory_heap_max__size=2G
+      - NEO4J_server_memory_pagecache_size=1G
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: shixun-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 1gb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: shixun-redis-insight
+    ports:
+      - "5540:5540"
+    volumes:
+      - redis_insight_data:/data
+    restart: unless-stopped
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  redis_data:
+  redis_insight_data:
