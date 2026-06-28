@@ -173,9 +173,15 @@ MAX_RESULT_COUNT = 200   # 第3层：返回结果上限
 QUERY_TIMEOUT_SEC = 3    # 第4层：查询超时熔断
 ```
 
-#### 前沿论文参考
+#### 前沿论文与项目参考
 
-调研了2024年SyntheT2C/MedT2C论文（arxiv 2406.10710）：使用LLM提示生成+模板填充双管道合成Text2Cypher训练数据，CodeLlama-13B在Hetionet医疗数据库上达到69.2%执行准确率，接近GPT-4o的72.1%。这作为我们未来升级深度学习方法的技术储备。
+| 资源 | 链接 | 说明 |
+|------|------|------|
+| **SyntheT2C 论文**（2024） | [arxiv.org/abs/2406.10710](https://arxiv.org/abs/2406.10710) | LLM提示生成 + 模板填充双管道合成 Text2Cypher 训练数据 |
+| **MedT2C 数据集** | [github.com/ZGChung/SyntheT2C](https://github.com/ZGChung/SyntheT2C) | 首个面向医疗领域的开源 Text2Cypher 合成数据集，覆盖 LHY 和 Hetionet 两个 Neo4j 数据库 |
+| **Text-to-Cypher Pipeline**（Elsevier 2025） | [sciencedirect.com](https://www.sciencedirect.com/science/article/pii/S0306457325002213) | 端到端 Text2Cypher 流水线最新综述 |
+
+**关键数据**：CodeLlama-13B 结合 SFT+DPO 对齐训练后，在 Hetionet 医疗数据库上达到 **69.2%** 执行准确率，接近 GPT-4o 的 **72.1%**（2025-2026 最新进展）。这作为我们未来从模板匹配升级到深度学习生成方案的技术储备。
 
 ---
 
@@ -222,11 +228,16 @@ $$S_{final} = 0.2 \cdot Sim_{Milvus} + 0.2 \cdot Rel_{Neo4j} + 0.4 \cdot Faithfu
 | **来源强制标注** | 每条结论明确标注出处（指南/药典/文献） | 安全红线 |
 | **拒绝编造能力** | 虚构药物/超范围问题直接兜底，不编造答案 | 安全红线 |
 
-**前沿论文参考**：
+**前沿论文与项目参考**：
 
-- RAG² (NAACL 2025 Oral)：合理性引导的医学RAG，准确率提升6.1%
-- GraphRAG for Rare Genetic Disease (npj Digital Medicine 2025)：Cypher RAG + Vector RAG临床验证，幻觉变异度降低53.94%
-- VeReaFine (BioNLP 2025)：迭代验证精炼，多跳推理错误减少26%
+| 资源 | 链接 | 说明 |
+|------|------|------|
+| **RAG²** Rationale-Guided RAG（NAACL 2025 Oral） | [arxiv.org/abs/2411.00300](https://arxiv.org/abs/2411.00300) | 合理性引导的医学 RAG，准确率提升 6.1% |
+| **GraphRAG** for Rare Genetic Disease（npj Digital Medicine 2025） | [nature.com/articles/s41746-025-01955-x](https://www.nature.com/articles/s41746-025-01955-x) | Cypher RAG + Vector RAG 临床验证，幻觉变异度降低 53.94% |
+| **VeReaFine**（BioNLP 2025） | [aclanthology.org/2025.bionlp-share.34](https://aclanthology.org/2025.bionlp-share.34/) | 迭代验证精炼，多跳推理错误减少 26% |
+| **RAG for Radiology** Contrast Media（npj Digital Medicine 2025） | [researchmap.jp](https://researchmap.jp/ahagiwara/published_papers/51050948) | 本地 Llama 3.2-11B + RAG，幻觉率 0% vs 基线 8% |
+| **medical-rag** 开源项目 | [github.com/yolo-hyl/medical-rag](https://github.com/yolo-hyl/medical-rag) | LangChain + Milvus 医学中文 RAG，混合检索召回率 91.32% |
+| **Doctor GPT** — Medical-Grade RAG | [dev.to](https://dev.to/beck_moulton/doctor-gpt-stop-hallucinating-and-build-a-medical-grade-rag-system-with-biobert-neo4j-3pdb) | BioBERT + Neo4j 医学 RAG 实战 |
 
 ---
 
@@ -296,6 +307,15 @@ MATCH (d1:Drug)-[r:CONTRAINDICATED_WITH|CAUTION_WITH|INTERACTS_WITH]-(d2:Drug)
 WHERE d1.name IN $drugs AND d2.name IN $drugs AND id(d1) < id(d2)
 RETURN d1.name AS drug_a, d2.name AS drug_b, type(r) AS rel_type
 ```
+
+#### 前沿论文与项目参考
+
+| 资源 | 链接 | 说明 |
+|------|------|------|
+| **Drug Interaction KG with Neo4j** | [dev.to](https://dev.to/beck_moulton/building-a-medical-grade-knowledge-graph-mapping-drug-interactions-with-neo4j-and-llamaindex-g6k) | Medical-Grade 药物相互作用知识图谱构建实战 |
+| **Neo4j Drug Safety** 官方案例 | [neo4j.com](https://neo4j.com/developer/industry-use-cases/life-sciences/medical-care/drug-safety/) | FAERS / DrugBank 数据建模与 Cypher 查询 |
+| **GraphRAG for Drug Side Effects** | [emergentmind.com](https://www.emergentmind.com/topics/graphrag-for-drug-side-effects) | GraphRAG 在药物副作用检测中的应用 |
+| **Neo4j GraphAcademy DDI Challenge** | [community.neo4j.com](https://community.neo4j.com/t/week-2-drug-interaction-checker-india/79490) | 药物相互作用检测社区案例与基准 |
 
 ---
 
