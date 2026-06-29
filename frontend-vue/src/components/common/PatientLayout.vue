@@ -52,7 +52,9 @@
       </div>
     </header>
     <main class="flex-1 overflow-hidden flex flex-col">
-      <router-view class="flex-1 overflow-hidden" />
+      <router-view v-slot="{ Component }" class="flex-1 overflow-hidden">
+        <keep-alive><component :is="Component" /></keep-alive>
+      </router-view>
       <!-- PRD: mandatory legal disclaimer on all screens -->
       <footer class="flex-shrink-0 border-t border-outline-variant/30 bg-surface-container-low/50 px-4 py-1.5 text-center">
         <p class="text-[11px] text-outline">医疗免责声明：本系统仅供授权医务人员及研究者使用。AI生成内容仅供参考，不构成临床诊断依据。所有操作全程审计记录。</p>

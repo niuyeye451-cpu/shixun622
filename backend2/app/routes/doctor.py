@@ -436,7 +436,6 @@ def query_knowledge(request: KnowledgeQueryRequest, current_user: dict = Depends
 
 
 @router.post("/knowledge/drug-interaction", response_model=ResponseModel)
-@router.post("/knowledge/drug-interaction", response_model=ResponseModel)
 def check_drug_interaction(request: DrugInteractionRequest, current_user: dict = Depends(get_doctor_user), db: Session = Depends(get_db)):
     """联合用药安全分析: AI + 知识图谱 + 自动存档"""
     drug_names = request.drug_names or []
