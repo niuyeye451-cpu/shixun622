@@ -223,34 +223,39 @@ def get_case_conversation_list(page: int = 1, page_size: int = 10, case_type: st
 
 @router.post("/consultation/multi-symptom", response_model=ResponseModel)
 def analyze_multi_symptom(request: MultiSymptomAnalyzeRequest, current_user: dict = Depends(get_doctor_user), db: Session = Depends(get_db)):
+    from app.graph_db import get_graph_db
+    graph_db = get_graph_db()
     analysis_results = []
-    for disease in request.diseases:
-        entity = db.query(MedicalEntity).filter(MedicalEntity.name == disease, MedicalEntity.type == "disease").first()
+    for disease_name in request.diseases:
+        entity = graph_db.get_node_by_name(disease_name, 'Disease')
+        if not entity:
+            results = graph_db.search_nodes(disease_name, label='Disease', limit=1)
+            if results: entity = results[0]
         if entity:
-            relations = db.query(MedicalRelation).filter(
-                (MedicalRelation.source_entity_id == entity.entity_id) |
-                (MedicalRelation.target_entity_id == entity.entity_id)
-            ).limit(10).all()
+            relations = graph_db.get_relations_by_node(entity['id'])
+            props = entity.get('properties', {})
             disease_info = {
-                "disease_id": entity.entity_id,
-                "disease_name": entity.name,
-                "description": entity.description,
+                "disease_id": entity['id'],
+                "disease_name": entity['name'],
+                "description": props.get('desc', '') if isinstance(props, dict) else '',
                 "related_symptoms": [],
                 "related_treatments": [],
                 "related_drugs": []
             }
-            for rel in relations:
-                target = db.query(MedicalEntity).filter(MedicalEntity.entity_id == rel.target_entity_id).first()
+            for rel in relations[:20]:
+                target = graph_db.get_node_by_id(rel.get('target_id', ''))
                 if target:
-                    if rel.relation_type == "has_symptom":
-                        disease_info["related_symptoms"].append({"name": target.name, "entity_id": target.entity_id})
-                    elif rel.relation_type == "has_treatment":
-                        disease_info["related_treatments"].append({"name": target.name, "entity_id": target.entity_id})
-                    elif rel.relation_type == "treats_with":
-                        disease_info["related_drugs"].append({"name": target.name, "entity_id": target.entity_id})
+                    rt = rel.get('relation_type', '')
+                    if rt == "has_symptom":
+                        disease_info["related_symptoms"].append({"name": target['name'], "entity_id": target['id']})
+                    elif rt in ("has_treatment", "cure_way"):
+                        disease_info["related_treatments"].append({"name": target['name'], "entity_id": target['id']})
+                    elif rt in ("common_drug", "recommand_drug"):
+                        disease_info["related_drugs"].append({"name": target['name'], "entity_id": target['id']})
             analysis_results.append(disease_info)
     
     # 用 AI 进行多疾病关联分析
+    ai_result = {"is_ai_generated": False}
     if analysis_results:
         disease_list = [d['disease_name'] for d in analysis_results]
         query = f"请对以下疾病进行多症状关联分析：{'、'.join(disease_list)}"
@@ -261,6 +266,19 @@ def analyze_multi_symptom(request: MultiSymptomAnalyzeRequest, current_user: dic
     else:
         correlation = "未在知识库中找到匹配的疾病信息，无法进行关联分析"
 
+    # 自动存档到检索历史
+    conversation = Conversation(
+        conversation_id=generate_id("conv_"),
+        doctor_id=current_user["user"].doctor_id,
+        session_type="case",
+        case_type="multi_symptom",
+        status="ended"
+    )
+    db.add(conversation)
+    db.add(Message(message_id=generate_id("msg_"), conversation_id=conversation.conversation_id, doctor_id=current_user["user"].doctor_id, sender_role="user", content=f"多症状分析: {', '.join(request.diseases)}"))
+    db.add(Message(message_id=generate_id("msg_"), conversation_id=conversation.conversation_id, sender_role="assistant", content=correlation[:500], answer_source="ai+kb" if ai_result.get("is_ai_generated") else "kb"))
+    db.commit()
+
     return ResponseModel(data={
         "analysis_depth": request.analysis_depth,
         "results": analysis_results,
@@ -270,7 +288,7 @@ def analyze_multi_symptom(request: MultiSymptomAnalyzeRequest, current_user: dic
 
 
 @router.post("/consultation/differential-diagnosis", response_model=ResponseModel)
-def differential_diagnosis(request: DifferentialDiagnosisRequest, current_user: dict = Depends(get_doctor_user)):
+def differential_diagnosis(request: DifferentialDiagnosisRequest, current_user: dict = Depends(get_doctor_user), db: Session = Depends(get_db)):
     # 组装临床Query
     query_parts = [f"主诉：{request.chief_complaint}"]
     if request.symptoms:
@@ -301,9 +319,22 @@ def differential_diagnosis(request: DifferentialDiagnosisRequest, current_user: 
             "treatment_principle": ""
         })
 
-    # 判断有无高危疾病（从关键词中检测）
+    # 判断有无高危疾病
     emergency_keywords = ["心梗", "脑出血", "主动脉夹层", "肺栓塞", "急性", "危重"]
     has_emergency = any(kw in result.get("answer", "") for kw in emergency_keywords)
+
+    # 自动存档到检索历史
+    conversation = Conversation(
+        conversation_id=generate_id("conv_"),
+        doctor_id=current_user["user"].doctor_id,
+        session_type="case",
+        case_type="differential_diagnosis",
+        status="ended"
+    )
+    db.add(conversation)
+    db.add(Message(message_id=generate_id("msg_"), conversation_id=conversation.conversation_id, doctor_id=current_user["user"].doctor_id, sender_role="user", content=f"鉴别诊断: {request.chief_complaint}"))
+    db.add(Message(message_id=generate_id("msg_"), conversation_id=conversation.conversation_id, sender_role="assistant", content=result["answer"][:500], answer_source="ai+kb" if result.get("is_ai_generated") else "kb"))
+    db.commit()
 
     return ResponseModel(data={
         "differential_list": differential_list,
@@ -316,11 +347,12 @@ def differential_diagnosis(request: DifferentialDiagnosisRequest, current_user: 
 
 @router.post("/knowledge/query", response_model=ResponseModel)
 def query_knowledge(request: KnowledgeQueryRequest, current_user: dict = Depends(get_doctor_user), db: Session = Depends(get_db)):
-    """知识检索: 搜索图数据库 + AI 语义分析"""
+    """知识检索: 搜索图数据库 + AI 语义分析（自动存档到检索历史）"""
     from app.graph_db import get_graph_db
+    doctor = current_user["user"]
     graph_db = get_graph_db()
 
-    # 从图数据库搜索实体（这才是数据所在处）
+    # 从图数据库搜索实体
     entities = graph_db.search_nodes(request.query, limit=10)
 
     # 同时调用 AI 语义分析
@@ -330,7 +362,6 @@ def query_knowledge(request: KnowledgeQueryRequest, current_user: dict = Depends
     for entity in entities:
         props = entity.get('properties', {})
         desc = props.get('desc', '') if isinstance(props, dict) else ''
-        # 获取关联关系
         relations = graph_db.get_relations_by_node(entity['id'])
         related = []
         for rel in relations[:10]:
@@ -361,6 +392,39 @@ def query_knowledge(request: KnowledgeQueryRequest, current_user: dict = Depends
             "attributes": {},
             "related_entities": []
         })
+
+    # ====== 自动存档：创建 Conversation + 保存消息，供检索历史使用 ======
+    conversation = Conversation(
+        conversation_id=generate_id("conv_"),
+        doctor_id=doctor.doctor_id,
+        session_type="case",
+        case_type="knowledge_search",
+        status="ended"
+    )
+    db.add(conversation)
+
+    # 用户消息
+    user_msg = Message(
+        message_id=generate_id("msg_"),
+        conversation_id=conversation.conversation_id,
+        doctor_id=doctor.doctor_id,
+        sender_role="user",
+        content=request.query
+    )
+    db.add(user_msg)
+
+    # 助手消息（AI 分析摘要）
+    ai_summary = ai_result.get("answer", "")[:500] if ai_result.get("answer") else f"查找到 {len(results)} 条相关结果"
+    assistant_msg = Message(
+        message_id=generate_id("msg_"),
+        conversation_id=conversation.conversation_id,
+        sender_role="assistant",
+        content=ai_summary,
+        reasoning_path=list_to_json_str(ai_result.get("keywords", [])),
+        answer_source="ai+kb" if ai_result.get("is_ai_generated") else "kb"
+    )
+    db.add(assistant_msg)
+    db.commit()
 
     return ResponseModel(data={
         "results": results,

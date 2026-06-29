@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full overflow-y-auto p-[16px] md:p-[40px] max-w-6xl mx-auto">
+  <div class="h-full w-full flex flex-col overflow-y-auto p-[16px] md:p-[24px]">
     <h1 class="text-2xl font-bold mb-6 flex items-center gap-2"><span class="material-symbols-outlined text-primary">history</span> 检索历史</h1>
     <div class="flex gap-2 mb-4">
       <input v-model="keyword" @input="loadHistory" class="w-64 h-12 px-4 rounded-lg border border-outline-variant bg-surface focus:border-primary outline-none text-sm" placeholder="搜索病例记录..." />
