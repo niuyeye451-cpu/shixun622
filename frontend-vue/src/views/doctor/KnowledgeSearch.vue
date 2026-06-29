@@ -1,6 +1,7 @@
 <template>
-  <div class="h-full overflow-y-auto p-[16px] md:p-[40px] max-w-7xl mx-auto">
-    <div class="flex gap-2 mb-6 border-b border-outline-variant overflow-x-auto">
+  <div class="h-full w-full flex flex-col overflow-y-auto p-[16px] md:p-[24px]">
+
+    <div class="flex gap-2 mb-6 border-b border-outline-variant overflow-x-auto shrink-0">
       <button v-for="tab in tabs" :key="tab.key" @click="activeTab = tab.key" :class="['px-4 py-2 rounded-t-lg text-sm font-medium border-b-2 transition-colors', activeTab === tab.key ? 'border-primary text-primary bg-surface-container-lowest' : 'border-transparent text-on-surface-variant']">{{ tab.label }}</button>
     </div>
 
@@ -43,14 +44,15 @@
     </div>
 
     <!-- Graph Browse -->
-    <div v-if="activeTab === 'graph'" class="flex flex-col gap-4">
-      <div class="flex gap-2">
+    <div v-if="activeTab === 'graph'" class="flex-1 flex flex-col gap-4 min-h-0">
+
+      <div class="flex gap-2 shrink-0">
         <input v-model="entityKeyword" @keydown.enter="searchEntities" class="flex-1 h-12 px-4 rounded-lg border border-outline-variant bg-surface text-sm" placeholder="搜索疾病名称，如：感冒、高血压、糖尿病" />
         <select v-model="entityType" class="h-12 px-3 rounded-lg border border-outline-variant bg-surface text-sm"><option value="">全部</option><option value="disease">疾病</option><option value="symptom">症状</option><option value="drug">药品</option></select>
         <button @click="searchEntities" class="h-12 px-6 rounded-lg bg-primary text-on-primary text-sm shadow-md">搜索</button>
       </div>
-      <!-- Entity search results → click to load graph -->
-      <div v-if="entityResults.length" class="space-y-1 max-h-48 overflow-y-auto">
+
+      <div v-if="entityResults.length" class="space-y-1 max-h-48 overflow-y-auto shrink-0">
         <div v-for="e in entityResults" :key="e.entity_id" @click="loadFullGraph(e.name)" class="flex justify-between items-center p-2.5 rounded-lg bg-surface-container-lowest border hover:bg-primary/5 transition-colors cursor-pointer">
           <div>
             <span class="px-2 py-0.5 rounded-full text-xs mr-2" :class="typeBadgeClass(e.type)">{{ typeLabel(e.type) }}</span>
@@ -59,10 +61,10 @@
           <span class="material-symbols-outlined text-outline text-sm">account_tree</span>
         </div>
       </div>
-      <!-- D3 力导向知识图谱 -->
-      <div class="bg-slate-900 rounded-xl min-h-[400px] flex-1 overflow-hidden relative">
+
+      <div class="bg-slate-900 rounded-xl flex-1 w-full min-h-[500px] relative overflow-hidden shadow-inner">
         <KnowledgeGraphCanvas v-if="graphData" :graphData="graphData" @nodeClick="onGraphNodeClick" />
-        <div v-else class="h-full flex items-center justify-center">
+        <div v-else class="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div class="text-center text-white/40">
             <span class="material-symbols-outlined text-5xl mb-3 block">account_tree</span>
             <p>搜索疾病名称，点击结果加载交互式知识图谱</p>
@@ -123,7 +125,6 @@ async function searchEntities() {
   try {
     const res = await commonApi.searchEntities(entityKeyword.value, entityType.value||undefined)
     if (res.code === 200) {
-      // API returns { total, entities } — unwrap
       const entities = (res.data as any)?.entities || res.data || []
       entityResults.value = entities
     }
