@@ -99,40 +99,31 @@ def query_knowledge_graph(keywords: List[str], max_per_keyword: int = 5) -> List
 def build_context_prompt(user_query: str, knowledge: List[Dict], role: str = "patient") -> str:
     """将知识图谱查询结果组装为给 AI 的上下文提示"""
     if not knowledge:
-        return f"用户问题: {user_query}\n\n知识库中未找到相关信息。请根据你的通用医学知识回答，并注明信息来源于通用知识。"
+        return f"用户问题: {user_query}\n\n知识库中未找到相关信息。请简短回答并注明来源于通用知识。"
 
+    # 精简到最多 8 条（原 15 条），减少 token 消耗和 AI 响应时间
     context_parts = []
-    for item in knowledge[:15]:  # 最多15条
+    for item in knowledge[:8]:
         parts = [f"【{item['type']}】{item['name']}"]
         if item.get('description'):
-            parts.append(f"  描述: {item['description'][:200]}")
-        if item.get('cause'):
-            parts.append(f"  病因: {item['cause'][:150]}")
-        if item.get('prevent'):
-            parts.append(f"  预防: {item['prevent'][:150]}")
-        if item.get('aliases'):
-            parts.append(f"  别名: {', '.join(item['aliases'][:3])}")
+            parts.append(f"  描述: {item['description'][:150]}")
         if item.get('related'):
-            rel_strs = [f"{r['target_name']}({r['relation_name'] or r['relation']})" for r in item['related'][:5]]
+            rel_strs = [f"{r['target_name']}({r['relation_name'] or r['relation']})" for r in item['related'][:3]]
             parts.append(f"  关联: {', '.join(rel_strs)}")
         context_parts.append('\n'.join(parts))
 
-    context_text = '\n\n---\n\n'.join(context_parts)
+    context_text = '\n\n'.join(context_parts)
 
     if role == "doctor":
         system = (
-            "你是一个临床决策辅助AI，为医师提供专业的诊疗参考。"
-            "请基于以下知识图谱数据，给出严谨的临床分析，包括可能的诊断、建议检查、治疗原则和用药注意事项。"
-            "每一条结论必须注明来自知识库还是通用医学知识。\n\n"
+            "你是临床决策辅助AI。请基于知识库数据给出简洁的诊疗分析（每种疾病一句话），标注来源。\n\n"
         )
     else:
         system = (
-            "你是一个医疗健康咨询AI，为患者提供通俗易懂的健康指导。"
-            "请基于以下知识图谱数据，用平实的语言回答用户问题，给出就医建议。"
-            "禁止给出明确的诊断结论，必须建议咨询专业医生。\n\n"
+            "你是医疗健康咨询AI。请基于知识库数据用通俗语言简短回答，建议就医，勿下诊断。\n\n"
         )
 
-    return system + f"知识库数据:\n{context_text}\n\n用户问题: {user_query}"
+    return system + f"知识库:\n{context_text}\n\n用户问题: {user_query}"
 
 
 # ====================== Step 4: 调用外部 AI API ======================
@@ -150,7 +141,7 @@ def _get_client():
 
     if api_key and api_key != "your-deepseek-api-key-here":
         from openai import OpenAI
-        _client = OpenAI(api_key=api_key, base_url=base_url)
+        _client = OpenAI(api_key=api_key, base_url=base_url, timeout=30.0, max_retries=1)
         return _client
     return None
 
@@ -172,11 +163,12 @@ def call_ai(prompt: str, max_tokens: int = 1500, temperature: float = 0.3) -> st
         response = client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": "你是一个专业的医疗AI助手。请严格基于提供的知识库数据回答问题。"},
+                {"role": "system", "content": "你是一个专业的医疗AI助手。请严格基于提供的知识库数据，简洁精准地回答。"},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=max_tokens,
             temperature=temperature,
+            timeout=25.0,  # 单次请求超时 25 秒，防止长时间挂起
         )
         return response.choices[0].message.content or ""
     except Exception as e:
