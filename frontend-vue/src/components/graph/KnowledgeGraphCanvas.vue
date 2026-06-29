@@ -88,12 +88,11 @@ function renderGraph(data: GraphData | null | undefined) {
   if (simulation) simulation.stop()
 
   simulation = d3.forceSimulation(rawNodes)
-    .force('link', d3.forceLink(validLinks).id((d: any) => d.id).distance(90))
-    .force('charge', d3.forceManyBody().strength(-250))
+    .force('link', d3.forceLink(validLinks).id((d: any) => d.id).distance(100)) // 稍微拉开边长
+    .force('charge', d3.forceManyBody().strength(-150)) // 【降低斥力】从-250降到-150，减少剧烈排斥
     .force('center', d3.forceCenter(width / 2, height / 2))
-    .force('collision', d3.forceCollide().radius(40))
-    // 🔴 核心防御 3：增加阻尼（摩擦力），从默认 0.2→0.35，图谱更快收敛静止
-    .velocityDecay(0.35)
+    .force('collision', d3.forceCollide().radius(25).iterations(2)) // 【缩小碰撞半径】减少节点间的物理挤压
+    .velocityDecay(0.45) // 【关键：增大阻尼=摩擦力】让节点极速安静下来
 
   // --- Edges ---
   const linkG = g.append('g').selectAll('g').data(validLinks).join('g')
@@ -110,12 +109,22 @@ function renderGraph(data: GraphData | null | undefined) {
     .on('mouseenter', (e: MouseEvent, d: any) => { tooltip.value = { node: d, x: e.offsetX + 15, y: e.offsetY - 10 } })
     .on('mouseleave', () => tooltip.value = { node: null, x: 0, y: 0 })
     .call(d3.drag<any, any>()
-      .on('start', (e: any, d: any) => { if (!e.active) simulation?.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y })
-      .on('drag', (e: any, d: any) => { d.fx = e.x; d.fy = e.y })
+      .on('start', (e: any, d: any) => {
+        // 【核心修复】不要用 alphaTarget(0.3) 持续加热！
+        // 改用 alpha(0.1) 只给一个瞬间的微小扰动能量，图谱会在拖动时依然保持冷却
+        if (!e.active) simulation?.alpha(0.1).restart()
+        d.fx = d.x
+        d.fy = d.y
+      })
+      .on('drag', (e: any, d: any) => {
+        d.fx = e.x
+        d.fy = e.y
+      })
       .on('end', (e: any, d: any) => {
-        // 🔴 核心防御 4：拖拽结束后 alphaTarget 必须归零，否则力引擎永远沸腾
         if (!e.active) simulation?.alphaTarget(0)
-        d.fx = null; d.fy = null
+        // 【体验升级】注释掉 fx/fy 释放！
+        // 拖动完松手后节点被"钉"在原地，方便用户手动整理图谱排版
+        // d.fx = null; d.fy = null;
       }))
 
   nodeG.append('circle')
