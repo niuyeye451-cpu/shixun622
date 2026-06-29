@@ -13,11 +13,11 @@
     <!-- Entities -->
     <div v-if="activeTab==='entities'" class="bg-surface-container-lowest rounded-xl border overflow-hidden">
       <div class="p-3 border-b flex gap-2 flex-wrap">
-        <input v-model="entSearch" @input="loadEntities" class="w-48 h-10 px-3 rounded-lg border border-outline-variant bg-surface text-sm" placeholder="搜索..." />
-        <select v-model="entType" @change="loadEntities" class="h-10 px-3 rounded-lg border border-outline-variant bg-surface text-sm"><option value="">全部</option><option value="disease">疾病</option><option value="symptom">症状</option><option value="drug">药品</option><option value="department">科室</option></select>
+        <input v-model="entSearch" @input="store.entityPage=1;loadEntities()" class="w-48 h-10 px-3 rounded-lg border border-outline-variant bg-surface text-sm" placeholder="搜索..." />
+        <select v-model="entType" @change="store.entityPage=1;loadEntities()" class="h-10 px-3 rounded-lg border border-outline-variant bg-surface text-sm"><option value="">全部</option><option value="disease">疾病</option><option value="symptom">症状</option><option value="drug">药品</option><option value="department">科室</option></select>
       </div>
       <table class="w-full text-sm"><thead><tr class="bg-surface border-b"><th class="p-3 text-xs uppercase text-on-surface-variant">名称</th><th class="p-3 text-xs uppercase text-on-surface-variant">类型</th><th class="p-3 text-xs uppercase text-on-surface-variant">别名</th><th class="p-3 text-xs uppercase text-on-surface-variant">状态</th><th class="p-3 text-xs uppercase text-on-surface-variant text-right">操作</th></tr></thead>
-      <tbody><tr v-if="entities.length===0"><td colspan="5" class="p-6 text-center">加载中...</td></tr>
+      <tbody><tr v-if="entities.length===0"><td colspan="5" class="p-6 text-center">{{ loadingEntities ? '加载中...' : '暂无数据' }}</td></tr>
         <tr v-for="e in entities" :key="e.entity_id" class="border-b hover:bg-surface-container/50">
           <td class="p-3 font-medium">{{ e.name }}</td><td class="p-3"><span class="px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">{{ e.type }}</span></td>
           <td class="p-3 text-xs text-on-surface-variant">{{ (e.aliases||[]).join(', ') || '-' }}</td>
@@ -25,13 +25,22 @@
           <td class="p-3 text-right"><button @click="editEntity(e)" class="text-primary text-xs mr-2">编辑</button><button @click="delEntity(e.entity_id)" class="text-error text-xs">删除</button></td>
         </tr>
       </tbody></table>
+      <!-- Pagination -->
+      <div class="flex items-center justify-between p-3 border-t bg-surface/50" v-if="entityTotal > 20">
+        <span class="text-xs text-on-surface-variant">共 {{ entityTotal }} 条</span>
+        <div class="flex gap-1">
+          <button @click="goPage(entityPage-1)" :disabled="entityPage<=1" class="px-3 py-1 rounded border text-xs disabled:opacity-30">上一页</button>
+          <span class="px-3 py-1 text-xs text-on-surface-variant">{{ entityPage }} / {{ Math.ceil(entityTotal/20) }}</span>
+          <button @click="goPage(entityPage+1)" :disabled="entityPage>=Math.ceil(entityTotal/20)" class="px-3 py-1 rounded border text-xs disabled:opacity-30">下一页</button>
+        </div>
+      </div>
     </div>
 
     <!-- Relations -->
     <div v-if="activeTab==='relations'" class="bg-surface-container-lowest rounded-xl border overflow-hidden">
       <div class="p-3 border-b flex justify-between"><select v-model="relType" @change="loadRelations" class="h-10 px-3 rounded-lg border border-outline-variant bg-surface text-sm"><option value="">全部</option><option value="has_symptom">有症状</option><option value="belongs_to_department">属于科室</option><option value="treat_with_drug">用药物治疗</option><option value="complication">并发症</option><option value="contraindication">禁忌症</option></select><button @click="openCreateRelation" class="h-10 px-4 rounded-lg bg-primary text-on-primary text-xs">新增关系</button></div>
       <table class="w-full text-sm"><thead><tr class="bg-surface border-b"><th class="p-3 text-xs uppercase">源实体</th><th class="p-3 text-xs uppercase">关系</th><th class="p-3 text-xs uppercase">目标实体</th><th class="p-3 text-xs uppercase">描述</th><th class="p-3 text-xs uppercase text-right">操作</th></tr></thead>
-      <tbody><tr v-if="relations.length===0"><td colspan="5" class="p-6 text-center">加载中...</td></tr>
+      <tbody><tr v-if="relations.length===0"><td colspan="5" class="p-6 text-center">{{ loadingRelations ? '加载中...' : '暂无数据' }}</td></tr>
         <tr v-for="r in relations" :key="r.relation_id" class="border-b hover:bg-surface-container/50">
           <td class="p-3">{{ r.source_entity_name }}</td><td class="p-3"><span class="px-2 py-0.5 rounded-full text-xs bg-tertiary/10 text-tertiary">{{ r.relation_name||r.relation_type }}</span></td>
           <td class="p-3">{{ r.target_entity_name }}</td><td class="p-3 text-xs text-on-surface-variant truncate max-w-[200px]">{{ r.text||'-' }}</td>
@@ -98,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useKnowledgeStore } from '@/stores/knowledge'
 import { adminApi } from '@/api/admin'
 
@@ -108,11 +117,23 @@ const tabs = [{key:'entities',label:'实体管理'},{key:'relations',label:'关�
 const entSearch = ref(''); const entType = ref(''); const relType = ref(''); const synSearch = ref('')
 const unknownList = ref<any[]>([])
 const uqDetail = ref<any>(null)
+const loadingEntities = ref(false); const loadingRelations = ref(false)
 const entities = computed(() => store.entities); const relations = computed(() => store.relations)
 const synonyms = computed(() => store.synonyms); const versions = computed(() => store.versions)
+const entityPage = computed(() => store.entityPage); const entityTotal = computed(() => store.entityTotal)
 
-async function loadEntities() { await store.loadEntities({ keyword: entSearch.value || undefined, type: entType.value || undefined }) }
-async function loadRelations() { await store.loadRelations({ relation_type: relType.value || undefined }) }
+function goPage(p: number) { store.entityPage = p; loadEntities() }
+
+async function loadEntities() {
+  loadingEntities.value = true
+  await store.loadEntities({ type: entType.value || undefined, keyword: entSearch.value || undefined })
+  loadingEntities.value = false
+}
+async function loadRelations() {
+  loadingRelations.value = true
+  await store.loadRelations({ relation_type: relType.value || undefined })
+  loadingRelations.value = false
+}
 async function loadSynonyms() { await store.loadSynonyms() }
 async function loadVersions() { await store.loadVersions() }
 async function loadUnknown() { try { const r = await adminApi.getUnknownQuestions({status:'pending',page_size:10}); if (r.code===200) unknownList.value = r.data.list } catch {} }

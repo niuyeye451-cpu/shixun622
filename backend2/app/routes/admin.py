@@ -237,37 +237,42 @@ def get_admin_list(keyword: str = None, role_level: int = None, page: int = 1, p
 
 @router.post("/knowledge/entities", response_model=ResponseModel)
 def create_medical_entity(request: MedicalEntityCreate, current_user: dict = Depends(get_admin_user), db: Session = Depends(get_db)):
-    existing = db.query(MedicalEntity).filter(MedicalEntity.name == request.name, MedicalEntity.type == request.type).first()
+    graph_db = get_graph_db()
+
+    # Type mapping for label
+    type_map = {"disease": "Disease", "symptom": "Symptom", "drug": "Drug",
+                "check": "Check", "department": "Department", "cure_way": "CureWay",
+                "food": "Food", "producer": "Producer"}
+    graph_label = type_map.get(request.type.lower(), request.type)
+
+    # Check duplicate in graph DB
+    existing = graph_db.get_node_by_name(request.name, graph_label)
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="该实体已存在")
-    
-    entity = MedicalEntity(
-        entity_id=generate_id("ent_"),
-        name=request.name,
-        type=request.type,
-        aliases=list_to_json_str(request.aliases) if request.aliases else None,
-        description=request.description,
-        attributes=dict_to_json_str(request.attributes) if request.attributes else None,
-        version_number=request.version_number,
-        status="draft"
+
+    entity_id = generate_id("ent_")
+    import json
+    props = json.dumps({
+        "desc": request.description or "",
+        "alias": request.aliases or []
+    }, ensure_ascii=False)
+    graph_db.execute(
+        'INSERT OR REPLACE INTO nodes (id, name, label, properties) VALUES (?, ?, ?, ?)',
+        (entity_id, request.name, graph_label, props)
     )
-    db.add(entity)
-    db.commit()
-    db.refresh(entity)
-    
-    log_operation(current_user, "create", "entity", entity.entity_id)
-    
+
+    log_operation(current_user, "create", "entity", entity_id)
     return ResponseModel(data={
-        "entity_id": entity.entity_id,
-        "name": entity.name,
-        "type": entity.type,
-        "status": entity.status,
-        "created_at": entity.created_at
+        "entity_id": entity_id,
+        "name": request.name,
+        "type": graph_label,
+        "status": "published",
+        "created_at": ""
     })
 
 
 @router.get("/knowledge/entities", response_model=ResponseModel)
-def get_entity_list(entity_type: str = None, keyword: str = None, status: str = None, page: int = 1, page_size: int = 10, current_user: dict = Depends(get_admin_user), db: Session = Depends(get_db)):
+def get_entity_list(type: str = None, keyword: str = None, status: str = None, page: int = 1, page_size: int = 10, current_user: dict = Depends(get_admin_user), db: Session = Depends(get_db)):
     # 从图数据库查询实体（数据在 graph.db 中，不在空 SQLite 表中）
     graph_db = get_graph_db()
 
@@ -277,7 +282,7 @@ def get_entity_list(entity_type: str = None, keyword: str = None, status: str = 
         "check": "Check", "department": "Department", "cure_way": "CureWay",
         "food": "Food", "producer": "Producer"
     }
-    graph_label = type_map.get(entity_type.lower()) if entity_type else None
+    graph_label = type_map.get(type.lower()) if type else None
 
     if keyword:
         all_entities = graph_db.search_nodes(keyword, graph_label, limit=500)
@@ -338,120 +343,90 @@ def get_entity_detail(entity_id: str, current_user: dict = Depends(get_admin_use
 
 @router.put("/knowledge/entities/{entity_id}", response_model=ResponseModel)
 def update_entity(entity_id: str, request: MedicalEntityUpdate, current_user: dict = Depends(get_admin_user), db: Session = Depends(get_db)):
-    entity = db.query(MedicalEntity).filter(MedicalEntity.entity_id == entity_id).first()
+    graph_db = get_graph_db()
+    entity = graph_db.get_node_by_id(entity_id)
     if not entity:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="实体不存在")
-    
+
+    # 更新图数据库节点属性
     if request.name:
-        entity.name = request.name
-    if request.aliases is not None:
-        entity.aliases = list_to_json_str(request.aliases)
+        graph_db.execute('UPDATE nodes SET name = ? WHERE id = ?', (request.name, entity_id))
     if request.description:
-        entity.description = request.description
-    if request.attributes is not None:
-        entity.attributes = dict_to_json_str(request.attributes)
-    if request.status:
-        entity.status = request.status
-    entity.updated_at = datetime.now()
-    
-    db.commit()
-    
+        graph_db.execute(
+            'UPDATE nodes SET properties = json_set(properties, "$.desc", ?) WHERE id = ?',
+            (request.description, entity_id)
+        )
+
     log_operation(current_user, "update", "entity", entity_id)
-    
     return ResponseModel(message="更新成功")
 
 
 @router.delete("/knowledge/entities/{entity_id}", response_model=ResponseModel)
 def delete_entity(entity_id: str, current_user: dict = Depends(get_admin_user), db: Session = Depends(get_db)):
-    entity = db.query(MedicalEntity).filter(MedicalEntity.entity_id == entity_id).first()
+    graph_db = get_graph_db()
+    entity = graph_db.get_node_by_id(entity_id)
     if not entity:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="实体不存在")
-    
-    db.delete(entity)
-    db.commit()
-    
+
+    # 删除图数据库节点及关联边
+    graph_db.execute('DELETE FROM relationships WHERE source_id = ? OR target_id = ?', (entity_id, entity_id))
+    graph_db.execute('DELETE FROM nodes WHERE id = ?', (entity_id,))
+
     log_operation(current_user, "delete", "entity", entity_id)
-    
     return ResponseModel(message="删除成功")
-
-
-@router.post("/knowledge/relations", response_model=ResponseModel)
-def create_medical_relation(request: MedicalRelationCreate, current_user: dict = Depends(get_admin_user), db: Session = Depends(get_db)):
-    source = db.query(MedicalEntity).filter(MedicalEntity.entity_id == request.source_entity_id).first()
-    target = db.query(MedicalEntity).filter(MedicalEntity.entity_id == request.target_entity_id).first()
-    
-    if not source:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="源实体不存在")
-    if not target:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="目标实体不存在")
-    
-    relation = MedicalRelation(
-        relation_id=generate_id("rel_"),
-        source_entity_id=request.source_entity_id,
-        target_entity_id=request.target_entity_id,
-        relation_type=request.relation_type,
-        text=request.text,
-        version_number=request.version_number
-    )
-    db.add(relation)
-    db.commit()
-    db.refresh(relation)
-    
-    log_operation(current_user, "create", "relation", relation.relation_id)
-    
-    return ResponseModel(data={
-        "relation_id": relation.relation_id,
-        "source_entity_id": relation.source_entity_id,
-        "target_entity_id": relation.target_entity_id,
-        "relation_type": relation.relation_type,
-        "created_at": relation.created_at
-    })
-
-
-@router.get("/knowledge/relations", response_model=ResponseModel)
-def get_relation_list(source_entity_id: str = None, target_entity_id: str = None, relation_type: str = None, page: int = 1, page_size: int = 10, current_user: dict = Depends(get_admin_user), db: Session = Depends(get_db)):
-    query = db.query(MedicalRelation)
-    if source_entity_id:
-        query = query.filter(MedicalRelation.source_entity_id == source_entity_id)
-    if target_entity_id:
-        query = query.filter(MedicalRelation.target_entity_id == target_entity_id)
-    if relation_type:
-        query = query.filter(MedicalRelation.relation_type == relation_type)
-    
-    total = query.count()
-    relations = query.order_by(MedicalRelation.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
-    
-    result = []
-    for rel in relations:
-        source = db.query(MedicalEntity).filter(MedicalEntity.entity_id == rel.source_entity_id).first()
-        target = db.query(MedicalEntity).filter(MedicalEntity.entity_id == rel.target_entity_id).first()
-        result.append({
-            "relation_id": rel.relation_id,
-            "source_entity_id": rel.source_entity_id,
-            "source_entity_name": source.name if source else "",
-            "target_entity_id": rel.target_entity_id,
-            "target_entity_name": target.name if target else "",
-            "relation_type": rel.relation_type,
-            "relation_name": rel.relation_name,
-            "text": rel.text,
-            "created_at": rel.created_at
-        })
-    
-    return ResponseModel(data={"list": result, "page": page, "page_size": page_size, "total": total})
 
 
 @router.delete("/knowledge/relations/{relation_id}", response_model=ResponseModel)
 def delete_relation(relation_id: str, current_user: dict = Depends(get_admin_user), db: Session = Depends(get_db)):
-    relation = db.query(MedicalRelation).filter(MedicalRelation.relation_id == relation_id).first()
-    if not relation:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="关系不存在")
-    
-    db.delete(relation)
-    db.commit()
-    
+    graph_db = get_graph_db()
+    graph_db.execute('DELETE FROM relationships WHERE id = ?', (relation_id,))
+
     log_operation(current_user, "delete", "relation", relation_id)
-    
     return ResponseModel(message="删除成功")
+
+
+@router.get("/knowledge/relations", response_model=ResponseModel)
+def get_relation_list(source_entity_id: str = None, target_entity_id: str = None, relation_type: str = None, page: int = 1, page_size: int = 10, current_user: dict = Depends(get_admin_user), db: Session = Depends(get_db)):
+    """关系列表 — 从图数据库查询"""
+    graph_db = get_graph_db()
+
+    # 从图数据库的 relationships 表查询
+    all_relations = graph_db.execute(
+        'SELECT * FROM relationships ORDER BY id LIMIT 5000'
+    )
+
+    # 过滤
+    filtered = []
+    for rel in all_relations:
+        if relation_type and rel.get('relation_type') != relation_type:
+            continue
+        if source_entity_id and rel.get('source_id') != source_entity_id:
+            continue
+        if target_entity_id and rel.get('target_id') != target_entity_id:
+            continue
+        filtered.append(rel)
+
+    total = len(filtered)
+    start = (page - 1) * page_size
+    paged = filtered[start:start + page_size]
+
+    result = []
+    for rel in paged:
+        source = graph_db.get_node_by_id(rel.get('source_id', ''))
+        target = graph_db.get_node_by_id(rel.get('target_id', ''))
+        result.append({
+            "relation_id": rel.get('id', ''),
+            "source_entity_id": rel.get('source_id', ''),
+            "source_entity_name": source['name'] if source else '',
+            "target_entity_id": rel.get('target_id', ''),
+            "target_entity_name": target['name'] if target else '',
+            "relation_type": rel.get('relation_type', ''),
+            "relation_name": rel.get('relation_name', ''),
+            "text": rel.get('relation_name', ''),
+            "created_at": ""
+        })
+
+    return ResponseModel(data={"list": result, "page": page, "page_size": page_size, "total": total})
 
 
 @router.post("/knowledge/synonyms", response_model=ResponseModel)
