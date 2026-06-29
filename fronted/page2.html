@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MedGraph AI - 智能问诊</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-variant": "#e1e2e4",
+                      "tertiary-fixed": "#ffddb3",
+                      "primary-fixed": "#dae2ff",
+                      "surface": "#f8f9fb",
+                      "error-container": "#ffdad6",
+                      "outline": "#737685",
+                      "tertiary-fixed-dim": "#ffb950",
+                      "on-tertiary-container": "#ffca81",
+                      "surface-container-high": "#e7e8ea",
+                      "inverse-surface": "#2e3132",
+                      "primary": "#003d9b",
+                      "inverse-on-surface": "#f0f1f3",
+                      "secondary": "#006b59",
+                      "inverse-primary": "#b2c5ff",
+                      "secondary-container": "#7cf8da",
+                      "secondary-fixed": "#7cf8da",
+                      "on-surface-variant": "#434654",
+                      "outline-variant": "#c3c6d6",
+                      "on-tertiary-fixed-variant": "#624000",
+                      "on-primary-fixed-variant": "#0040a2",
+                      "surface-container-highest": "#e1e2e4",
+                      "on-secondary-fixed": "#00201a",
+                      "surface-bright": "#f8f9fb",
+                      "primary-container": "#0052cc",
+                      "on-primary": "#ffffff",
+                      "on-secondary-fixed-variant": "#005143",
+                      "secondary-fixed-dim": "#5ddbbe",
+                      "error": "#ba1a1a",
+                      "surface-container-low": "#f3f4f6",
+                      "tertiary": "#5e3c00",
+                      "on-primary-container": "#c4d2ff",
+                      "on-background": "#191c1e",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-container": "#edeef0",
+                      "on-surface": "#191c1e",
+                      "on-tertiary": "#ffffff",
+                      "tertiary-container": "#7d5200",
+                      "surface-tint": "#0c56d0",
+                      "on-tertiary-fixed": "#291800",
+                      "on-secondary": "#ffffff",
+                      "on-primary-fixed": "#001848",
+                      "surface-dim": "#d9dadc",
+                      "background": "#f8f9fb",
+                      "primary-fixed-dim": "#b2c5ff",
+                      "on-error-container": "#93000a",
+                      "on-secondary-container": "#00725f",
+                      "on-error": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "md": "24px",
+                      "sm": "16px",
+                      "lg": "32px",
+                      "margin-mobile": "16px",
+                      "xl": "48px",
+                      "base": "4px",
+                      "xs": "8px",
+                      "margin-desktop": "40px",
+                      "gutter": "24px"
+              },
+              "fontFamily": {
+                      "label-sm": ["Inter"],
+                      "label-md": ["JetBrains Mono"],
+                      "headline-lg": ["Inter"],
+                      "headline-lg-mobile": ["Inter"],
+                      "body-md": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "display-lg": ["Inter"],
+                      "body-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+              }
+            }
+          }
+        }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=JetBrains+Mono:wght@100..900&display=swap" rel="stylesheet"/>
+<script src="js/api.js"></script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Knowledge Graph Node Glow & Hover */
+        .kg-node {
+            transition: all 0.3s ease;
+        }
+        .kg-node:hover {
+            transform: scale(1.1);
+            filter: drop-shadow(0 0 12px rgba(255,255,255,0.4));
+        }
+        .glass-tooltip {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+        .kg-node-container:hover .glass-tooltip {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface h-screen flex flex-col overflow-hidden">
+<!-- TopAppBar -->
+<header class="bg-surface/80 dark:bg-surface-container/80 backdrop-blur-xl border-b border-outline-variant dark:border-outline shadow-sm sticky top-0 z-50 flex items-center justify-between px-margin-mobile md:px-margin-desktop h-16 w-full flex-shrink-0">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary text-[28px]" style="font-variation-settings: 'FILL' 1;">medical_information</span>
+<span class="font-headline-md text-headline-md-mobile md:text-headline-md text-primary dark:text-primary-fixed-dim tracking-tight">MedGraph AI</span>
+</div>
+<div class="hidden md:flex items-center gap-lg">
+<!-- Nav Items would go here if this was a destination hub, but as a focused tool, we limit nav -->
+</div>
+<div class="flex items-center gap-sm">
+<button class="p-xs rounded-full hover:bg-surface-container-highest/50 transition-colors active:scale-95 duration-200 cursor-pointer text-primary dark:text-primary-fixed-dim">
+<span class="material-symbols-outlined" data-icon="mic">mic</span>
+</button>
+<button class="p-xs rounded-full hover:bg-surface-container-highest/50 transition-colors active:scale-95 duration-200 cursor-pointer text-primary dark:text-primary-fixed-dim">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-xs rounded-full hover:bg-surface-container-highest/50 transition-colors active:scale-95 duration-200 cursor-pointer text-primary dark:text-primary-fixed-dim">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content Area (5:3:2 Layout on Desktop) -->
+<main class="flex-1 flex flex-col md:flex-row overflow-hidden p-margin-mobile md:p-margin-desktop gap-gutter">
+<!-- Left Column: QA Flow (50%) -->
+<section class="w-full md:w-5/12 lg:w-1/2 flex flex-col h-full bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/50 overflow-hidden">
+<!-- Chat History -->
+<div class="flex-1 overflow-y-auto p-md flex flex-col gap-lg">
+<!-- User Question -->
+<div class="flex justify-end">
+<div class="bg-surface-container px-md py-sm rounded-2xl rounded-tr-none max-w-[80%]">
+<p class="font-body-md text-body-md text-on-surface">最近经常觉得胸闷，偶尔伴有放射性左臂疼痛，尤其是在爬楼梯之后，这是怎么回事？需要吃什么药吗？</p>
+</div>
+</div>
+<!-- System Response Card -->
+<div class="flex justify-start">
+<div class="bg-surface-container-lowest shadow-[0_4px_12px_rgba(0,61,155,0.05)] border border-outline-variant/30 rounded-2xl rounded-tl-none p-md max-w-[90%] flex flex-col gap-sm relative">
+<!-- Blue Left Accent Line -->
+<div class="absolute left-0 top-md bottom-md w-1 bg-primary rounded-r-full"></div>
+<div class="flex items-center gap-xs text-primary mb-xs">
+<span class="material-symbols-outlined text-[18px]">smart_toy</span>
+<span class="font-label-md text-label-md font-bold">MedGraph 分析结果</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+                            根据您描述的症状（劳力性胸闷、放射性左臂疼痛），这高度提示可能存在<strong>心肌缺血</strong>或<strong>心绞痛</strong>。这些症状通常由于心脏冠状动脉供血不足引起。
+                        </p>
+<div class="bg-error-container/30 border border-error-container rounded-lg p-sm mt-xs">
+<p class="font-body-md text-body-md text-on-surface">
+<strong class="text-error">警告：</strong>这属于潜在的高危症状。建议您<span class="text-[#f59e0b] font-bold">绝对避免剧烈运动</span>，并且在未明确诊断前，<span class="text-[#f59e0b] font-bold">切勿擅自服用扩血管药物</span>以免掩盖病情或引发低血压。
+                            </p>
+</div>
+<div class="mt-xs">
+<p class="font-body-md text-body-md text-on-surface-variant mb-xs">可能的疾病关联：</p>
+<div class="flex flex-wrap gap-2">
+<span class="bg-primary/10 text-primary px-3 py-1 rounded-full font-label-sm text-label-sm border border-primary/20">冠心病 (CHD)</span>
+<span class="bg-primary/10 text-primary px-3 py-1 rounded-full font-label-sm text-label-sm border border-primary/20">稳定型心绞痛</span>
+</div>
+</div>
+<!-- Disclaimer -->
+<div class="bg-surface-variant/30 rounded-md p-xs mt-sm flex items-start gap-xs">
+<span class="material-symbols-outlined text-[16px] text-outline mt-0.5">info</span>
+<p class="text-[12px] text-outline leading-tight">免责声明：本分析基于您的主观描述与医学知识图谱生成，仅供参考，不作为最终临床诊断依据。请务必线下就医以获取专业医疗建议。</p>
+</div>
+<!-- Card Footer -->
+<div class="flex justify-between items-center mt-sm pt-sm border-t border-outline-variant/30">
+<button class="flex items-center gap-1 text-primary text-[12px] hover:underline">
+<span class="material-symbols-outlined text-[14px]">menu_book</span>
+                                参考临床指南: AHA/ACC 2021
+                            </button>
+<div class="flex gap-2 text-outline">
+<button class="hover:text-primary transition-colors"><span class="material-symbols-outlined text-[18px]">thumb_up</span></button>
+<button class="hover:text-error transition-colors"><span class="material-symbols-outlined text-[18px]">thumb_down</span></button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Input Area -->
+<div class="p-md border-t border-outline-variant/50 bg-surface-container-lowest">
+<div class="relative shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] rounded-[12px] bg-surface-container-low border border-outline-variant flex items-end">
+<textarea class="w-full bg-transparent border-none focus:ring-0 resize-none p-sm font-body-md text-body-md text-on-surface placeholder-on-surface-variant/50" placeholder="描述您的症状或输入医学问题..." rows="2"></textarea>
+<div class="p-2 flex gap-2">
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined">attach_file</span>
+</button>
+<button class="p-2 rounded-full bg-primary text-on-primary hover:bg-primary-container transition-colors shadow-md">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Middle Column: Knowledge Graph Canvas (30%) -->
+<section class="w-full md:w-4/12 lg:w-[30%] h-64 md:h-full bg-[#1e293b] rounded-xl shadow-inner overflow-hidden relative flex flex-col border border-outline-variant/20">
+<!-- Toolbar -->
+<div class="absolute top-sm right-sm z-10 flex gap-2">
+<button class="bg-surface-container-lowest/10 backdrop-blur-md border border-white/20 text-white p-1.5 rounded-md hover:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-[20px]">zoom_in</span>
+</button>
+<button class="bg-surface-container-lowest/10 backdrop-blur-md border border-white/20 text-white p-1.5 rounded-md hover:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-[20px]">zoom_out</span>
+</button>
+<button class="bg-surface-container-lowest/10 backdrop-blur-md border border-white/20 text-white p-1.5 rounded-md hover:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-[20px]">fit_screen</span>
+</button>
+</div>
+<div class="absolute top-sm left-sm z-10">
+<span class="bg-surface-container-lowest/10 backdrop-blur-md border border-white/20 text-white px-2 py-1 rounded font-label-sm text-[11px] uppercase tracking-wider flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-green-400"></span> Live Graph
+                 </span>
+</div>
+<!-- Graph Visualization Placeholder (Simulated Canvas) -->
+<div class="flex-1 relative w-full h-full flex items-center justify-center">
+<!-- Lines connecting nodes -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" style="opacity: 0.3;">
+<line stroke="#fff" stroke-dasharray="4,4" stroke-width="1" x1="50%" x2="30%" y1="50%" y2="30%"></line>
+<line stroke="#fff" stroke-dasharray="4,4" stroke-width="1" x1="50%" x2="70%" y1="50%" y2="20%"></line>
+<line stroke="#fff" stroke-dasharray="4,4" stroke-width="1" x1="50%" x2="80%" y1="50%" y2="60%"></line>
+<line stroke="#fff" stroke-dasharray="4,4" stroke-width="1" x1="50%" x2="20%" y1="50%" y2="70%"></line>
+</svg>
+<!-- Center Node (Disease - Blue) -->
+<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 kg-node-container z-20 cursor-pointer">
+<div class="w-16 h-16 rounded-full bg-blue-900/50 border-2 border-blue-400 flex items-center justify-center kg-node shadow-[0_0_15px_rgba(96,165,250,0.5)]">
+<span class="text-blue-100 font-label-sm text-[10px] text-center px-1">冠心病<br/>(CHD)</span>
+</div>
+<!-- Tooltip -->
+<div class="glass-tooltip absolute left-full top-1/2 transform -translate-y-1/2 ml-4 w-48 p-3 rounded-lg bg-black/60 text-white z-30">
+<h4 class="font-bold text-sm mb-1 text-blue-300">冠状动脉粥样硬化性心脏病</h4>
+<p class="text-xs text-gray-300 line-clamp-3">冠状动脉血管发生动脉粥样硬化病变而引起血管腔狭窄或阻塞，造成心肌缺血、缺氧或坏死而导致的心脏病。</p>
+</div>
+</div>
+<!-- Symptom Node 1 (Red) -->
+<div class="absolute top-[30%] left-[30%] transform -translate-x-1/2 -translate-y-1/2 kg-node-container z-20 cursor-pointer">
+<div class="w-12 h-12 rounded-full bg-red-900/50 border-2 border-red-400 flex items-center justify-center kg-node">
+<span class="text-red-100 font-label-sm text-[10px]">胸闷</span>
+</div>
+</div>
+<!-- Symptom Node 2 (Red) -->
+<div class="absolute top-[20%] left-[70%] transform -translate-x-1/2 -translate-y-1/2 kg-node-container z-20 cursor-pointer">
+<div class="w-12 h-12 rounded-full bg-red-900/50 border-2 border-red-400 flex items-center justify-center kg-node">
+<span class="text-red-100 font-label-sm text-[10px] text-center leading-tight">左臂<br/>放射痛</span>
+</div>
+</div>
+<!-- Drug Node (Green) -->
+<div class="absolute top-[60%] left-[80%] transform -translate-x-1/2 -translate-y-1/2 kg-node-container z-20 cursor-pointer">
+<div class="w-12 h-12 rounded-full bg-emerald-900/50 border-2 border-emerald-400 flex items-center justify-center kg-node">
+<span class="text-emerald-100 font-label-sm text-[10px] text-center leading-tight">硝酸<br/>甘油</span>
+</div>
+</div>
+<!-- Concept Node (Yellow/Warning) -->
+<div class="absolute top-[70%] left-[20%] transform -translate-x-1/2 -translate-y-1/2 kg-node-container z-20 cursor-pointer">
+<div class="w-12 h-12 rounded-full bg-orange-900/50 border-2 border-orange-400 flex items-center justify-center kg-node">
+<span class="text-orange-100 font-label-sm text-[10px] text-center leading-tight">禁剧烈<br/>运动</span>
+</div>
+</div>
+</div>
+<div class="p-2 text-center text-white/50 text-[10px] font-mono">
+                知识图谱交互渲染中...
+            </div>
+</section>
+<!-- Right Column: Recommendations (20%) -->
+<section class="w-full md:w-3/12 lg:w-[20%] flex flex-col gap-md">
+<h3 class="font-headline-sm text-headline-md-mobile text-on-surface">智能导诊推荐</h3>
+<!-- Dept Card -->
+<div class="bg-gradient-to-br from-blue-50 to-white dark:from-surface-container-high dark:to-surface-container shadow-sm border border-primary/20 rounded-xl p-md flex flex-col items-center text-center">
+<div class="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-sm">
+<span class="material-symbols-outlined text-[32px]">monitor_heart</span>
+</div>
+<h4 class="font-headline-md text-headline-md-mobile text-on-surface mb-xs">心血管内科</h4>
+<p class="font-body-md text-[13px] text-on-surface-variant mb-md">匹配度: 98% <span class="text-green-600 font-bold ml-1">极高</span></p>
+<p class="font-body-md text-[12px] text-on-surface-variant/80 text-left w-full border-t border-outline-variant/30 pt-sm">
+                    专门负责诊断和治疗心脏血管系统疾病，包括冠心病、心律失常等。
+                </p>
+</div>
+<!-- CTA Button -->
+<button class="w-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md py-4 px-md rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-sm">
+<span class="material-symbols-outlined text-[20px]">calendar_month</span>
+                一键预约挂号
+            </button>
+<!-- Secondary Options -->
+<div class="mt-auto">
+<h5 class="font-label-sm text-label-sm text-on-surface-variant mb-2">备选科室</h5>
+<div class="flex flex-col gap-2">
+<div class="bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-2 flex justify-between items-center cursor-pointer hover:bg-surface-container-low transition-colors">
+<span class="font-body-md text-[13px] text-on-surface">急诊科</span>
+<span class="font-label-sm text-[11px] text-error bg-error-container text-on-error-container px-2 py-0.5 rounded-full">危重转诊</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<script>
+// ========== Patient Consultation Page Logic ==========
+let currentConversationId = null;
+let conversations = [];
+let userInfo = null;
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!requireRole('patient')) return;
+  userInfo = User.get();
+  updateHeader();
+  await loadConversations();
+  await loadRecommendations();
+});
+
+function updateHeader() {
+  if (!userInfo) return;
+  // Update header if needed
+  const profileBtn = document.querySelector('[data-icon="account_circle"]');
+  if (profileBtn) {
+    profileBtn.title = userInfo.user_name || userInfo.phone;
+  }
+}
+
+// ========== Conversation Management ==========
+async function loadConversations() {
+  try {
+    const res = await PatientAPI.getConversations(1, 20);
+    if (res.code === 200 && res.data.list.length > 0) {
+      conversations = res.data.list;
+      // Select most recent active conversation
+      const active = conversations.find(c => c.status === 'active');
+      if (active) {
+        currentConversationId = active.conversation_id;
+        await loadMessages(currentConversationId);
+      }
+    }
+  } catch (err) {
+    console.error('加载对话列表失败:', err);
+  }
+}
+
+async function loadMessages(conversationId) {
+  try {
+    const res = await PatientAPI.getMessages(conversationId);
+    if (res.code === 200) {
+      renderMessages(res.data.list);
+    }
+  } catch (err) {
+    console.error('加载消息失败:', err);
+  }
+}
+
+function renderMessages(messages) {
+  const container = document.querySelector('.flex-1.overflow-y-auto');
+  if (!container) return;
+
+  let html = '';
+  for (const msg of messages) {
+    if (msg.role === 'user') {
+      html += `
+        <div class="flex justify-end">
+          <div class="bg-surface-container px-md py-sm rounded-2xl rounded-tr-none max-w-[80%]">
+            <p class="font-body-md text-body-md text-on-surface">${escapeHtml(msg.content)}</p>
+          </div>
+        </div>`;
+    } else {
+      html += `
+        <div class="flex justify-start">
+          <div class="bg-surface-container-lowest shadow-[0_4px_12px_rgba(0,61,155,0.05)] border border-outline-variant/30 rounded-2xl rounded-tl-none p-md max-w-[90%] flex flex-col gap-sm relative">
+            <div class="absolute left-0 top-md bottom-md w-1 bg-primary rounded-r-full"></div>
+            <div class="flex items-center gap-xs text-primary mb-xs">
+              <span class="material-symbols-outlined text-[18px]">smart_toy</span>
+              <span class="font-label-md text-label-md font-bold">MedGraph 分析结果</span>
+            </div>
+            <p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">${escapeHtml(msg.content)}</p>
+            <div class="bg-surface-variant/30 rounded-md p-xs mt-sm flex items-start gap-xs">
+              <span class="material-symbols-outlined text-[16px] text-outline mt-0.5">info</span>
+              <p class="text-[12px] text-outline leading-tight">免责声明：本分析基于知识图谱生成，仅供参考，不作为最终临床诊断依据。</p>
+            </div>
+            <div class="flex justify-between items-center mt-sm pt-sm border-t border-outline-variant/30">
+              ${msg.answer_source ? `<span class="text-[12px] text-outline">来源: ${escapeHtml(msg.answer_source)}</span>` : ''}
+              <div class="flex gap-2 text-outline">
+                <button class="hover:text-primary transition-colors" onclick="submitFeedback('${msg.message_id}', true)"><span class="material-symbols-outlined text-[18px]">thumb_up</span></button>
+                <button class="hover:text-error transition-colors" onclick="submitFeedback('${msg.message_id}', false)"><span class="material-symbols-outlined text-[18px]">thumb_down</span></button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+  }
+  container.innerHTML = html || '<p class="text-center text-on-surface-variant mt-8">开始新的对话吧</p>';
+  container.scrollTop = container.scrollHeight;
+}
+
+// ========== Message Sending ==========
+async function sendMessage() {
+  const textarea = document.querySelector('textarea');
+  if (!textarea) return;
+  const content = textarea.value.trim();
+  if (!content) return;
+
+  textarea.value = '';
+  textarea.focus();
+
+  const container = document.querySelector('.flex-1.overflow-y-auto');
+
+  // Show user message immediately
+  const userDiv = document.createElement('div');
+  userDiv.className = 'flex justify-end';
+  userDiv.innerHTML = `<div class="bg-surface-container px-md py-sm rounded-2xl rounded-tr-none max-w-[80%]"><p class="font-body-md text-body-md text-on-surface">${escapeHtml(content)}</p></div>`;
+  container.appendChild(userDiv);
+  container.scrollTop = container.scrollHeight;
+
+  // Show loading
+  const loadingDiv = document.createElement('div');
+  loadingDiv.className = 'flex justify-start';
+  loadingDiv.innerHTML = `<div class="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl rounded-tl-none p-md max-w-[90%]"><p class="text-on-surface-variant"><span class="material-symbols-outlined animate-spin align-middle text-[18px]">progress_activity</span> 分析中...</p></div>`;
+  container.appendChild(loadingDiv);
+  container.scrollTop = container.scrollHeight;
+
+  try {
+    let res;
+    if (!currentConversationId) {
+      // Create new conversation
+      res = await PatientAPI.createConversation('symptom', content);
+      if (res.code === 200) {
+        currentConversationId = res.data.conversation_id;
+      }
+    } else {
+      res = await PatientAPI.sendMessage(currentConversationId, content);
+    }
+
+    if (res && res.code === 200) {
+      // Reload all messages
+      await loadMessages(currentConversationId);
+      // Update recommendations
+      await loadRecommendations();
+    }
+  } catch (err) {
+    showToast('发送失败: ' + err.message, 'error');
+    loadingDiv.remove();
+  }
+}
+
+// ========== Quick Symptom Query ==========
+async function quickSymptomQuery() {
+  const textarea = document.querySelector('textarea');
+  if (!textarea) return;
+  const content = textarea.value.trim();
+  if (!content) return;
+
+  textarea.value = '';
+
+  try {
+    const res = await PatientAPI.quickSymptomQuery(content);
+    if (res.code === 200) {
+      showToast('分析完成，查看右侧推荐科室', 'success');
+      await loadRecommendations();
+    }
+  } catch (err) {
+    showToast('查询失败: ' + err.message, 'error');
+  }
+}
+
+// ========== Recommendations ==========
+async function loadRecommendations() {
+  try {
+    // Load departments
+    const deptRes = await CommonAPI.getDepartments();
+    if (deptRes.code === 200 && deptRes.data.length > 0) {
+      updateRecommendationPanel(deptRes.data);
+    }
+  } catch (err) {
+    console.error('加载推荐失败:', err);
+  }
+}
+
+function updateRecommendationPanel(departments) {
+  const rightPanel = document.querySelector('section.w-full.md\\:w-3\\/12');
+  if (!rightPanel) return;
+
+  // Show first department as main recommendation
+  const dept = departments[0];
+  const altDepts = departments.slice(1, 3);
+
+  rightPanel.innerHTML = `
+    <h3 class="font-headline-sm text-headline-md-mobile text-on-surface">智能导诊推荐</h3>
+    <div class="bg-gradient-to-br from-blue-50 to-white dark:from-surface-container-high dark:to-surface-container shadow-sm border border-primary/20 rounded-xl p-md flex flex-col items-center text-center">
+      <div class="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-sm">
+        <span class="material-symbols-outlined text-[32px]">monitor_heart</span>
+      </div>
+      <h4 class="font-headline-md text-headline-md-mobile text-on-surface mb-xs">${escapeHtml(dept.department_name)}</h4>
+      <p class="font-body-md text-[13px] text-on-surface-variant mb-md">${escapeHtml(dept.description || '')}</p>
+    </div>
+    <button class="w-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md py-4 px-md rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-sm" onclick="goToRegistration('${dept.department_id}')">
+      <span class="material-symbols-outlined text-[20px]">calendar_month</span>
+      一键预约挂号
+    </button>
+    <div class="mt-auto">
+      <h5 class="font-label-sm text-label-sm text-on-surface-variant mb-2">备选科室</h5>
+      <div class="flex flex-col gap-2">
+        ${altDepts.map(d => `
+          <div class="bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-2 flex justify-between items-center cursor-pointer hover:bg-surface-container-low transition-colors" onclick="goToRegistration('${d.department_id}')">
+            <span class="font-body-md text-[13px] text-on-surface">${escapeHtml(d.department_name)}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+// ========== Feedback ==========
+async function submitFeedback(messageId, isAccurate) {
+  try {
+    await CommonAPI.submitFeedback({
+      rating: isAccurate ? 5 : 1,
+      is_accurate: isAccurate,
+      content: isAccurate ? '回答准确' : '回答需要改进'
+    });
+    showToast('感谢您的反馈！', 'success');
+  } catch (err) {
+    console.error('反馈失败:', err);
+  }
+}
+
+// ========== Navigation ==========
+function goToRegistration(departmentId) {
+  window.location.href = `page5.html?dept=${departmentId}`;
+}
+
+// ========== Event Listeners ==========
+// Bind send button
+document.addEventListener('DOMContentLoaded', () => {
+  const sendBtn = document.querySelector('button .material-symbols-outlined');
+  document.querySelectorAll('button').forEach(btn => {
+    if (btn.querySelector('.material-symbols-outlined')?.textContent === 'send') {
+      btn.onclick = sendMessage;
+    }
+  });
+
+  // Enter key to send
+  const textarea = document.querySelector('textarea');
+  if (textarea) {
+    textarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+  }
+
+  // Header buttons
+  document.querySelectorAll('header button').forEach(btn => {
+    const icon = btn.querySelector('.material-symbols-outlined');
+    if (icon) {
+      if (icon.textContent?.includes('account_circle')) {
+        btn.onclick = () => window.location.href = 'page5.html';
+      }
+      if (icon.textContent?.includes('notifications')) {
+        btn.onclick = () => showToast('暂无新消息', 'info');
+      }
+    }
+  });
+});
+
+// ========== Utility ==========
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+</script>
+</body></html>

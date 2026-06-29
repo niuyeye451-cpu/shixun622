@@ -144,6 +144,31 @@ class Registration(Base):
     consultation = relationship("Consultation", back_populates="registration")
 
 
+class Department(Base):
+    __tablename__ = "departments"
+
+    dept_id = Column(String(32), primary_key=True, index=True)
+    dept_name = Column(String(50), nullable=False)
+    dept_desc = Column(Text, nullable=True)
+    parent_id = Column(String(32), nullable=True)
+    sort_order = Column(Integer, default=0)
+    status = Column(Integer, default=1)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class Hospital(Base):
+    __tablename__ = "hospitals"
+
+    hospital_id = Column(String(32), primary_key=True, index=True)
+    hospital_name = Column(String(100), nullable=False)
+    hospital_level = Column(String(20), nullable=True)
+    address = Column(String(255), nullable=True)
+    phone = Column(String(20), nullable=True)
+    dept_list = Column(Text, nullable=True)
+    status = Column(Integer, default=1)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 class MedicalEntity(Base):
     __tablename__ = "medical_entities"
 

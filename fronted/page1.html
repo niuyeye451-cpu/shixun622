@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MedGraph AI - 登录</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#e1e2e4",
+                    "tertiary-fixed": "#ffddb3",
+                    "primary-fixed": "#dae2ff",
+                    "surface": "#f8f9fb",
+                    "error-container": "#ffdad6",
+                    "outline": "#737685",
+                    "tertiary-fixed-dim": "#ffb950",
+                    "on-tertiary-container": "#ffca81",
+                    "surface-container-high": "#e7e8ea",
+                    "inverse-surface": "#2e3132",
+                    "primary": "#003d9b",
+                    "inverse-on-surface": "#f0f1f3",
+                    "secondary": "#006b59",
+                    "inverse-primary": "#b2c5ff",
+                    "secondary-container": "#7cf8da",
+                    "secondary-fixed": "#7cf8da",
+                    "on-surface-variant": "#434654",
+                    "outline-variant": "#c3c6d6",
+                    "on-tertiary-fixed-variant": "#624000",
+                    "on-primary-fixed-variant": "#0040a2",
+                    "surface-container-highest": "#e1e2e4",
+                    "on-secondary-fixed": "#00201a",
+                    "surface-bright": "#f8f9fb",
+                    "primary-container": "#0052cc",
+                    "on-primary": "#ffffff",
+                    "on-secondary-fixed-variant": "#005143",
+                    "secondary-fixed-dim": "#5ddbbe",
+                    "error": "#ba1a1a",
+                    "surface-container-low": "#f3f4f6",
+                    "tertiary": "#5e3c00",
+                    "on-primary-container": "#c4d2ff",
+                    "on-background": "#191c1e",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container": "#edeef0",
+                    "on-surface": "#191c1e",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-container": "#7d5200",
+                    "surface-tint": "#0c56d0",
+                    "on-tertiary-fixed": "#291800",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed": "#001848",
+                    "surface-dim": "#d9dadc",
+                    "background": "#f8f9fb",
+                    "primary-fixed-dim": "#b2c5ff",
+                    "on-error-container": "#93000a",
+                    "on-secondary-container": "#00725f",
+                    "on-error": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "md": "24px",
+                    "sm": "16px",
+                    "lg": "32px",
+                    "margin-mobile": "16px",
+                    "xl": "48px",
+                    "base": "4px",
+                    "xs": "8px",
+                    "margin-desktop": "40px",
+                    "gutter": "24px"
+            },
+            "fontFamily": {
+                    "label-sm": [
+                            "Inter"
+                    ],
+                    "label-md": [
+                            "JetBrains Mono"
+                    ],
+                    "headline-lg": [
+                            "Inter"
+                    ],
+                    "headline-lg-mobile": [
+                            "Inter"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ],
+                    "headline-md": [
+                            "Inter"
+                    ],
+                    "display-lg": [
+                            "Inter"
+                    ],
+                    "body-lg": [
+                            "Inter"
+                    ]
+            },
+            "fontSize": {
+                    "label-sm": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "label-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "letterSpacing": "0.02em",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg-mobile": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-md": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "display-lg": [
+                            "48px",
+                            {
+                                    "lineHeight": "56px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "400"
+                            }
+                    ]
+            }
+          }
+        }
+      }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="js/api.js"></script>
+<style>
+        .pulse-network {
+            animation: pulse-op 4s infinite ease-in-out;
+        }
+        @keyframes pulse-op {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background h-screen w-screen overflow-hidden flex flex-col md:flex-row font-body-md text-body-md">
+<!-- Left Column (60% Desktop, hidden on mobile) -->
+<div class="hidden md:flex md:w-[60%] relative bg-primary overflow-hidden items-center justify-center flex-col text-on-primary">
+<!-- Abstract Network Background Pattern -->
+<div class="absolute inset-0 z-0 opacity-40 mix-blend-overlay" style="background-image: radial-gradient(circle at center, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 32px 32px;">
+<svg class="pulse-network absolute inset-0 z-0" height="100%" width="100%">
+<defs>
+<pattern height="100" id="network" patternunits="userSpaceOnUse" width="100" x="0" y="0">
+<line stroke="rgba(255,255,255,0.2)" stroke-width="1" x1="20" x2="80" y1="20" y2="80"></line>
+<line stroke="rgba(255,255,255,0.2)" stroke-width="1" x1="80" x2="20" y1="20" y2="80"></line>
+<circle cx="20" cy="20" fill="rgba(255,255,255,0.5)" r="3"></circle>
+<circle cx="80" cy="80" fill="rgba(255,255,255,0.5)" r="3"></circle>
+<circle cx="80" cy="20" fill="rgba(255,255,255,0.5)" r="3"></circle>
+<circle cx="20" cy="80" fill="rgba(255,255,255,0.5)" r="3"></circle>
+<circle cx="50" cy="50" fill="rgba(255,255,255,0.8)" r="4"></circle>
+</pattern>
+</defs>
+<rect fill="url(#network)" height="100%" width="100%"></rect>
+</svg>
+</div>
+<div class="z-10 text-center px-xl max-w-2xl"><div class="mb-xl">
+<h1 class="font-display-lg text-display-lg mb-sm tracking-tight text-on-primary font-bold flex items-center justify-center gap-sm">
+<span class="material-symbols-outlined text-[56px]" style="font-variation-settings: 'FILL' 1;">hub</span>
+        MedGraph AI
+    </h1>
+<p class="font-headline-md text-headline-md text-on-primary-container font-light">
+        构建精准医疗知识图谱，赋能临床决策与科研创新。
+    </p>
+</div>
+<div class="flex flex-col gap-md w-full max-w-md mx-auto">
+<div class="flex items-center gap-md p-sm rounded-xl bg-surface-container-lowest/20 border-2 border-on-primary shadow-lg transition-all cursor-pointer role-card" data-role="patient" id="role-patient">
+<div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-container-lowest">
+<img alt="User" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkqHke7itBhNqE8yjubc--1E-IsUdtwHyC56kORVudzrLKsCrw9Qs_2hIuqGTmsZKtN1D8S6rSBPGN2Wf30vKzi_m7diYlza66cNY7cv1K24l93ClYEkvZKRqLuTTyhm6wuJ48fCfMV-WXy_p9NuVTKU9OMYMoR3l3_QsobxN4Gr5QqZULXOXfCcQnCgiafQ6meXizeDhDXobl-iakzUVu-7KYjYE_H_5JEMMuURmur5DgbVuwCIU8pajxZFeZX-bgLc8jUAB2WAw"/>
+</div>
+<span class="font-headline-md text-on-primary">我是用户</span>
+</div>
+<div class="flex items-center gap-md p-sm rounded-xl bg-white/5 border border-white/20 hover:bg-white/10 transition-all cursor-pointer role-card" data-role="doctor" id="role-doctor">
+<div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-container-lowest">
+<img alt="Doctor" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALritO6--0GLJwS_aWI2UrBLyNCnxczQF7zOOu-lgAPswSOnukEfxscribHQNPvC5LnDrjsBuQHdVbj_rczQYS2CJ9neCjNIaluvbp72N_dKApjTX7yvDMJ4banMILMGMYD4OE3oxjlSo91RHAPK6HNgF-ZaJQEE4gNszdAXGwED-hCMaZXeZabWL3ZNI2fwTfB_Rgl-Bqqde3ssIYuzTRhmYNlllfoaTL-sHG5jvdGBFmRbNULHUGS11Bp1-lKII2lMP6ZgbcaLc"/>
+</div>
+<span class="font-headline-md text-on-primary">我是医生</span>
+</div>
+<div class="flex items-center gap-md p-sm rounded-xl bg-white/5 border border-white/20 hover:bg-white/10 transition-all cursor-pointer role-card" data-role="admin" id="role-admin">
+<div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-container-lowest">
+<img alt="Admin" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCeevu_D34yGHNqGjKTdRdNMM_u9YbWarn72tqJIE3CbmeIf0yzTU0eJK2QYpfMFMQxbdHeGrQOcjqgLcRwxckdg8TCCEBnSCNFUg-YD9eryBxuwqBvQ4hRIMsJbT0J6ueYtGwV-2nHCQSqTP05Q-ABxy-QNopGyS0xs-HhJr1kW6-ziUlsr2RI6I4xwC0_yHEa1xNHRGreeLxa72bduVoR9Cd8aQJExxEj5R7HGQH8O5eV-4DJJHeX4l-VZUEXREOx57VYB9imIH4"/>
+</div>
+<span class="font-headline-md text-on-primary">我是管理员</span>
+</div>
+</div></div>
+</div>
+<!-- Right Column (40% Desktop, 100% Mobile) -->
+<div class="w-full md:w-[40%] bg-surface-container-lowest h-full flex flex-col justify-center items-center relative p-margin-mobile md:p-margin-desktop">
+<div class="w-full max-w-md bg-surface-container-lowest shadow-sm border border-surface-variant rounded-xl p-lg flex flex-col gap-lg">
+<div class="text-center md:hidden mb-sm">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary font-bold flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[32px]" style="font-variation-settings: 'FILL' 1;">hub</span>
+                    MedGraph AI
+                </h2>
+</div>
+<div class="text-center mb-sm">
+<h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface font-semibold" id="login-title">用户登录</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-xs" id="login-desc">请输入您的手机号码及验证码以进入系统。</p>
+</div>
+<form class="flex flex-col gap-sm w-full" id="login-form" onsubmit="return false;">
+<!-- Phone input (patient mode) -->
+<div class="flex flex-col gap-base" id="phone-group">
+<label class="font-label-sm text-label-sm text-on-surface-variant" for="phone">手机号码</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-sm text-outline">phone_iphone</span>
+<input autocomplete="tel" class="w-full h-12 pl-xl pr-sm rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors font-body-md text-body-md text-on-surface" id="phone" placeholder="请输入11位手机号码" type="tel"/>
+</div>
+</div>
+<!-- SMS code input (patient mode) -->
+<div class="flex flex-col gap-base" id="sms-group">
+<label class="font-label-sm text-label-sm text-on-surface-variant" for="code">验证码</label>
+<div class="flex gap-xs items-stretch h-12">
+<div class="relative flex-1 flex items-center">
+<span class="material-symbols-outlined absolute left-sm text-outline">lock</span>
+<input class="w-full h-full pl-xl pr-sm rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors font-body-md text-body-md text-on-surface" id="code" placeholder="6位验证码" type="text"/>
+</div>
+<button class="px-sm h-full rounded-lg border border-primary text-primary hover:bg-primary-container hover:text-on-primary-container transition-colors font-label-md text-label-md whitespace-nowrap" id="sms-btn" type="button" onclick="sendSmsCode()">
+                            获取验证码
+                        </button>
+</div>
+</div>
+<!-- Username input (doctor/admin mode, hidden by default) -->
+<div class="flex flex-col gap-base" id="username-group" style="display:none;">
+<label class="font-label-sm text-label-sm text-on-surface-variant" for="username">用户名</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-sm text-outline">person</span>
+<input class="w-full h-12 pl-xl pr-sm rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors font-body-md text-body-md text-on-surface" id="username" placeholder="请输入用户名" type="text"/>
+</div>
+</div>
+<!-- Password input (doctor/admin mode, hidden by default) -->
+<div class="flex flex-col gap-base" id="password-group" style="display:none;">
+<label class="font-label-sm text-label-sm text-on-surface-variant" for="password">密码</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-sm text-outline">lock</span>
+<input class="w-full h-12 pl-xl pr-sm rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors font-body-md text-body-md text-on-surface" id="password" placeholder="请输入密码" type="password"/>
+</div>
+</div>
+<button class="w-full h-12 mt-sm rounded-lg bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all font-label-md text-label-md flex justify-center items-center shadow-[0_4px_12px_rgba(0,61,155,0.15)]" id="login-btn" type="submit" onclick="handleLogin()">
+                    登 录
+                </button>
+</form>
+</div>
+<!-- Disclaimer -->
+<div class="absolute bottom-margin-mobile md:bottom-margin-desktop w-full text-center px-margin-mobile md:px-margin-desktop">
+<p class="font-label-sm text-label-sm text-outline">
+                非法访问与医疗数据免责警告：本系统仅供授权医务人员及研究者使用。所有操作均被记录审计。未授权访问将面临法律追责。
+            </p>
+</div>
+</div>
+<script>
+// ========== Login Page Logic ==========
+let currentRole = 'patient';
+let smsId = null;
+
+// Role switching
+document.querySelectorAll('.role-card').forEach(card => {
+  card.addEventListener('click', () => {
+    // Update visual state
+    document.querySelectorAll('.role-card').forEach(c => {
+      c.classList.remove('border-2', 'border-on-primary', 'shadow-lg', 'bg-surface-container-lowest/20');
+      c.classList.add('border', 'border-white/20', 'bg-white/5');
+    });
+    card.classList.add('border-2', 'border-on-primary', 'shadow-lg', 'bg-surface-container-lowest/20');
+    card.classList.remove('border', 'border-white/20', 'bg-white/5');
+
+    currentRole = card.dataset.role;
+    switchLoginMode(currentRole);
+  });
+});
+
+function switchLoginMode(role) {
+  const phoneGroup = document.getElementById('phone-group');
+  const smsGroup = document.getElementById('sms-group');
+  const usernameGroup = document.getElementById('username-group');
+  const passwordGroup = document.getElementById('password-group');
+  const title = document.getElementById('login-title');
+  const desc = document.getElementById('login-desc');
+
+  if (role === 'patient') {
+    phoneGroup.style.display = 'flex';
+    smsGroup.style.display = 'flex';
+    usernameGroup.style.display = 'none';
+    passwordGroup.style.display = 'none';
+    title.textContent = '用户登录';
+    desc.textContent = '请输入您的手机号码及验证码以进入系统。';
+  } else if (role === 'doctor') {
+    phoneGroup.style.display = 'none';
+    smsGroup.style.display = 'none';
+    usernameGroup.style.display = 'flex';
+    passwordGroup.style.display = 'flex';
+    title.textContent = '医师登录';
+    desc.textContent = '请输入您的用户名及密码以进入系统。';
+  } else if (role === 'admin') {
+    phoneGroup.style.display = 'none';
+    smsGroup.style.display = 'none';
+    usernameGroup.style.display = 'flex';
+    passwordGroup.style.display = 'flex';
+    title.textContent = '管理员登录';
+    desc.textContent = '请输入管理员账号及密码以进入系统。';
+  }
+}
+
+async function sendSmsCode() {
+  const phone = document.getElementById('phone').value.trim();
+  if (!phone || phone.length !== 11) {
+    showToast('请输入正确的11位手机号码', 'error');
+    return;
+  }
+  const btn = document.getElementById('sms-btn');
+  btn.disabled = true;
+  btn.textContent = '发送中...';
+  try {
+    const res = await AuthAPI.sendSms(phone, 'login');
+    if (res.code === 200) {
+      smsId = res.data.sms_id;
+      showToast('验证码已发送 (演示: 123456)', 'success');
+      // Countdown
+      let sec = 60;
+      const timer = setInterval(() => {
+        sec--;
+        btn.textContent = `${sec}s后重发`;
+        if (sec <= 0) {
+          clearInterval(timer);
+          btn.disabled = false;
+          btn.textContent = '获取验证码';
+        }
+      }, 1000);
+    }
+  } catch (err) {
+    showToast('发送失败: ' + err.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '获取验证码';
+  }
+}
+
+async function handleLogin() {
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="material-symbols-outlined animate-spin">progress_activity</span> 登录中...';
+
+  try {
+    let res;
+    if (currentRole === 'patient') {
+      const phone = document.getElementById('phone').value.trim();
+      const code = document.getElementById('code').value.trim();
+      if (!phone || !code) {
+        showToast('请输入手机号和验证码', 'error');
+        btn.disabled = false;
+        btn.textContent = '登 录';
+        return;
+      }
+      if (!smsId) {
+        showToast('请先获取验证码', 'error');
+        btn.disabled = false;
+        btn.textContent = '登 录';
+        return;
+      }
+      res = await AuthAPI.patientLogin(phone, code, smsId);
+    } else if (currentRole === 'doctor') {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      if (!username || !password) {
+        showToast('请输入用户名和密码', 'error');
+        btn.disabled = false;
+        btn.textContent = '登 录';
+        return;
+      }
+      res = await AuthAPI.doctorLogin(username, password);
+    } else if (currentRole === 'admin') {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      if (!username || !password) {
+        showToast('请输入用户名和密码', 'error');
+        btn.disabled = false;
+        btn.textContent = '登 录';
+        return;
+      }
+      res = await AuthAPI.adminLogin(username, password);
+    }
+
+    if (res && res.code === 200) {
+      showToast('登录成功！正在跳转...', 'success');
+      setTimeout(() => {
+        const redirects = {
+          patient: 'page2.html',
+          doctor: 'page3.html',
+          admin: 'page4.html'
+        };
+        window.location.href = redirects[currentRole];
+      }, 500);
+    }
+  } catch (err) {
+    showToast('登录失败: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '登 录';
+  }
+}
+
+// Allow Enter key to submit
+document.getElementById('login-form').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    handleLogin();
+  }
+});
+
+// Initialize with patient mode selected
+document.getElementById('role-patient').click();
+</script>
+</body></html>

@@ -14,7 +14,7 @@ from app.schemas import (
     KnowledgeVersionCreate, ResolveUnknownQuestionRequest,
     BatchResolveRequest, ResponseModel
 )
-from app.utils import generate_id, list_to_json_str, json_str_to_list, json_str_to_dict, dict_to_json_str
+from app.utils import generate_id, list_to_json_str, json_str_to_list, json_str_to_dict, dict_to_json_str, get_password_hash
 from app.dependencies import get_admin_user
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
@@ -146,7 +146,7 @@ def create_doctor(request: CreateDoctorRequest, current_user: dict = Depends(get
         doctor_id=generate_id("doc_"),
         user_name=request.user_name,
         phone=request.phone,
-        password_hash=request.password_hash,
+        password_hash=get_password_hash(request.password_hash),
         department=request.department,
         title=request.title,
         hospital=request.hospital,

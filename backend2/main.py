@@ -8,8 +8,10 @@ from app.routes.common import router as common_router
 from app.routes.patient import router as patient_router
 from app.routes.doctor import router as doctor_router
 from app.routes.admin import router as admin_router
+from app.init_db import init_default_admin
 
 Base.metadata.create_all(bind=engine)
+init_default_admin()
 
 app = FastAPI(
     title="医药问答系统 API",
@@ -36,6 +38,11 @@ if not os.path.exists("uploads"):
     os.makedirs("uploads")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+# Mount frontend static files
+fronted_dir = os.path.join(os.path.dirname(__file__), "..", "fronted")
+if os.path.exists(fronted_dir):
+    app.mount("/fronted", StaticFiles(directory=fronted_dir, html=True), name="fronted")
+
 
 @app.get("/")
 def health_check():
@@ -44,4 +51,4 @@ def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

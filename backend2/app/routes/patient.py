@@ -231,10 +231,10 @@ def quick_symptom_query(request: QuickSymptomRequest, current_user: dict = Depen
     })
 
 
-@router.get("/consultation/disease/{disease_id}/graph", response_model=ResponseModel)
-def get_disease_graph(disease_id: str, current_user: dict = Depends(get_patient_user), db: Session = Depends(get_db)):
+@router.get("/consultation/disease/{disease_name}/graph", response_model=ResponseModel)
+def get_disease_graph(disease_name: str, current_user: dict = Depends(get_patient_user), db: Session = Depends(get_db)):
     from app.routes.common import get_disease_graph as common_graph
-    return common_graph(disease_id=disease_id, db=db)
+    return common_graph(disease_name=disease_name, db=db)
 
 
 @router.post("/recommendation/department", response_model=ResponseModel)

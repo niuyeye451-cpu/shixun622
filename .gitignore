@@ -32,6 +32,13 @@ uploads/*
 *.tar.gz
 *.rar
 
+# Node
+node_modules/
+
+# Vite
+.vite/
+frontend-vue/dist/
+
 # OS
 .DS_Store
 Thumbs.db

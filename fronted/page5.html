@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>个人中心 - MedGraph AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "surface-variant": "#e1e2e4", "tertiary-fixed": "#ffddb3", "primary-fixed": "#dae2ff",
+          "surface": "#f8f9fb", "error-container": "#ffdad6", "outline": "#737685",
+          "tertiary-fixed-dim": "#ffb950", "on-tertiary-container": "#ffca81",
+          "surface-container-high": "#e7e8ea", "inverse-surface": "#2e3132", "primary": "#003d9b",
+          "inverse-on-surface": "#f0f1f3", "secondary": "#006b59", "inverse-primary": "#b2c5ff",
+          "secondary-container": "#7cf8da", "secondary-fixed": "#7cf8da", "on-surface-variant": "#434654",
+          "outline-variant": "#c3c6d6", "on-tertiary-fixed-variant": "#624000",
+          "on-primary-fixed-variant": "#0040a2", "surface-container-highest": "#e1e2e4",
+          "on-secondary-fixed": "#00201a", "surface-bright": "#f8f9fb", "primary-container": "#0052cc",
+          "on-primary": "#ffffff", "on-secondary-fixed-variant": "#005143", "secondary-fixed-dim": "#5ddbbe",
+          "error": "#ba1a1a", "surface-container-low": "#f3f4f6", "tertiary": "#5e3c00",
+          "on-primary-container": "#c4d2ff", "on-background": "#191c1e",
+          "surface-container-lowest": "#ffffff", "surface-container": "#edeef0", "on-surface": "#191c1e",
+          "on-tertiary": "#ffffff", "tertiary-container": "#7d5200", "surface-tint": "#0c56d0",
+          "on-tertiary-fixed": "#291800", "on-secondary": "#ffffff", "on-primary-fixed": "#001848",
+          "surface-dim": "#d9dadc", "background": "#f8f9fb", "primary-fixed-dim": "#b2c5ff",
+          "on-error-container": "#93000a", "on-secondary-container": "#00725f", "on-error": "#ffffff"
+        },
+        "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+        "spacing": { "md": "24px", "sm": "16px", "lg": "32px", "margin-mobile": "16px", "xl": "48px", "base": "4px", "xs": "8px", "margin-desktop": "40px", "gutter": "24px" },
+        "fontFamily": {
+          "label-sm": ["Inter"], "label-md": ["JetBrains Mono"], "headline-lg": ["Inter"],
+          "headline-lg-mobile": ["Inter"], "body-md": ["Inter"], "headline-md": ["Inter"],
+          "display-lg": ["Inter"], "body-lg": ["Inter"]
+        },
+        "fontSize": {
+          "label-sm": ["12px", {"lineHeight":"16px","fontWeight":"600"}],
+          "label-md": ["14px", {"lineHeight":"20px","letterSpacing":"0.02em","fontWeight":"500"}],
+          "headline-lg": ["32px", {"lineHeight":"40px","letterSpacing":"-0.01em","fontWeight":"600"}],
+          "headline-lg-mobile": ["24px", {"lineHeight":"32px","fontWeight":"600"}],
+          "body-md": ["16px", {"lineHeight":"24px","fontWeight":"400"}],
+          "headline-md": ["24px", {"lineHeight":"32px","fontWeight":"600"}],
+          "display-lg": ["48px", {"lineHeight":"56px","letterSpacing":"-0.02em","fontWeight":"700"}],
+          "body-lg": ["18px", {"lineHeight":"28px","fontWeight":"400"}]
+        }
+      }
+    }
+  }
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="js/api.js"></script>
+</head>
+<body class="bg-background text-on-background min-h-screen font-body-md">
+<!-- TopAppBar -->
+<header class="bg-surface/80 backdrop-blur-xl border-b border-outline-variant shadow-sm sticky top-0 z-50 flex items-center justify-between px-margin-mobile md:px-margin-desktop h-16 w-full">
+  <div class="flex items-center gap-xs">
+    <span class="material-symbols-outlined text-primary text-[28px]" style="font-variation-settings: 'FILL' 1;">medical_information</span>
+    <a href="page2.html" class="font-headline-md text-headline-md-mobile md:text-headline-md text-primary tracking-tight hover:underline">MedGraph AI</a>
+  </div>
+  <div class="flex items-center gap-sm">
+    <a href="page2.html" class="px-sm py-xs rounded-lg hover:bg-surface-container-highest/50 transition-colors text-on-surface-variant font-label-md text-label-md flex items-center gap-1">
+      <span class="material-symbols-outlined text-[18px]">chat</span>
+      智能问诊
+    </a>
+    <button class="px-sm py-xs rounded-lg bg-error/10 text-error hover:bg-error/20 transition-colors font-label-md text-label-md flex items-center gap-1" onclick="handleLogout()">
+      <span class="material-symbols-outlined text-[18px]">logout</span>
+      退出
+    </button>
+  </div>
+</header>
+
+<!-- Main Content -->
+<main class="max-w-6xl mx-auto p-margin-mobile md:p-margin-desktop">
+  <!-- Tab Navigation -->
+  <div class="flex gap-2 mb-lg border-b border-outline-variant pb-0 overflow-x-auto" id="tab-bar">
+    <button class="tab-btn px-md py-sm rounded-t-lg font-label-md text-label-md border-b-2 transition-colors whitespace-nowrap active" data-tab="profile">
+      <span class="material-symbols-outlined text-[18px] align-middle">person</span> 个人信息
+    </button>
+    <button class="tab-btn px-md py-sm rounded-t-lg font-label-md text-label-md border-b-2 transition-colors whitespace-nowrap" data-tab="history">
+      <span class="material-symbols-outlined text-[18px] align-middle">history</span> 咨询记录
+    </button>
+    <button class="tab-btn px-md py-sm rounded-t-lg font-label-md text-label-md border-b-2 transition-colors whitespace-nowrap" data-tab="registrations">
+      <span class="material-symbols-outlined text-[18px] align-middle">event_note</span> 挂号记录
+    </button>
+    <button class="tab-btn px-md py-sm rounded-t-lg font-label-md text-label-md border-b-2 transition-colors whitespace-nowrap" data-tab="appointment">
+      <span class="material-symbols-outlined text-[18px] align-middle">calendar_month</span> 预约挂号
+    </button>
+  </div>
+
+  <!-- Tab: Personal Profile -->
+  <section class="tab-content" id="tab-profile">
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant p-lg max-w-2xl">
+      <h2 class="font-headline-md text-headline-md-mobile text-on-surface mb-lg flex items-center gap-xs">
+        <span class="material-symbols-outlined text-primary">badge</span> 个人资料
+      </h2>
+      <form id="profile-form" class="flex flex-col gap-sm" onsubmit="return false;">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-sm">
+          <div class="flex flex-col gap-base">
+            <label class="font-label-sm text-label-sm text-on-surface-variant">用户名</label>
+            <input class="w-full h-12 px-sm rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none font-body-md" id="prof-user_name" placeholder="用户名"/>
+          </div>
+          <div class="flex flex-col gap-base">
+            <label class="font-label-sm text-label-sm text-on-surface-variant">手机号</label>
+            <input class="w-full h-12 px-sm rounded-lg border border-outline-variant bg-surface-container font-body-md text-on-surface-variant" id="prof-phone" disabled/>
+          </div>
+          <div class="flex flex-col gap-base">
+            <label class="font-label-sm text-label-sm text-on-surface-variant">性别</label>
+            <select class="w-full h-12 px-sm rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none font-body-md" id="prof-gender">
+              <option value="">请选择</option>
+              <option value="male">男</option>
+              <option value="female">女</option>
+            </select>
+          </div>
+          <div class="flex flex-col gap-base">
+            <label class="font-label-sm text-label-sm text-on-surface-variant">年龄</label>
+            <input class="w-full h-12 px-sm rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none font-body-md" id="prof-age" type="number" placeholder="年龄"/>
+          </div>
+          <div class="flex flex-col gap-base">
+            <label class="font-label-sm text-label-sm text-on-surface-variant">血型</label>
+            <select class="w-full h-12 px-sm rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none font-body-md" id="prof-blood_type">
+              <option value="">请选择</option>
+              <option value="A">A型</option>
+              <option value="B">B型</option>
+              <option value="AB">AB型</option>
+              <option value="O">O型</option>
+            </select>
+          </div>
+          <div class="flex flex-col gap-base md:col-span-2">
+            <label class="font-label-sm text-label-sm text-on-surface-variant">地址</label>
+            <input class="w-full h-12 px-sm rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none font-body-md" id="prof-address" placeholder="地址"/>
+          </div>
+          <div class="flex flex-col gap-base md:col-span-2">
+            <label class="font-label-sm text-label-sm text-on-surface-variant">过敏史 (用逗号分隔)</label>
+            <input class="w-full h-12 px-sm rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none font-body-md" id="prof-allergy" placeholder="如: 青霉素, 海鲜"/>
+          </div>
+          <div class="flex flex-col gap-base md:col-span-2">
+            <label class="font-label-sm text-label-sm text-on-surface-variant">既往病史 (用逗号分隔)</label>
+            <input class="w-full h-12 px-sm rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none font-body-md" id="prof-history" placeholder="如: 高血压, 糖尿病"/>
+          </div>
+        </div>
+        <button class="w-full md:w-48 h-12 mt-sm rounded-lg bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all font-label-md text-label-md flex justify-center items-center gap-xs shadow-md" onclick="saveProfile()">
+          <span class="material-symbols-outlined text-[18px]">save</span> 保存修改
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Tab: Consultation History -->
+  <section class="tab-content hidden" id="tab-history">
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant overflow-hidden">
+      <div class="p-sm border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
+        <h2 class="font-headline-md text-headline-md-mobile text-on-surface flex items-center gap-xs">
+          <span class="material-symbols-outlined text-primary">history</span> 咨询记录
+        </h2>
+        <input class="w-64 h-10 px-sm rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none font-body-md text-[14px]" id="history-search" placeholder="搜索咨询记录..." oninput="loadConsultationHistory()"/>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-surface border-b border-outline-variant">
+              <th class="p-sm font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">日期</th>
+              <th class="p-sm font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">咨询内容</th>
+              <th class="p-sm font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">匹配疾病</th>
+              <th class="p-sm font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">推荐科室</th>
+              <th class="p-sm font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider text-right">操作</th>
+            </tr>
+          </thead>
+          <tbody id="history-table-body" class="font-body-md text-body-md">
+            <tr><td colspan="5" class="p-lg text-center text-on-surface-variant">加载中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="p-sm border-t border-outline-variant flex justify-center gap-2" id="history-pagination"></div>
+    </div>
+  </section>
+
+  <!-- Tab: Registrations -->
+  <section class="tab-content hidden" id="tab-registrations">
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant overflow-hidden">
+      <div class="p-sm border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
+        <h2 class="font-headline-md text-headline-md-mobile text-on-surface flex items-center gap-xs">
+          <span class="material-symbols-outlined text-primary">event_note</span> 挂号记录
+        </h2>
+        <div class="flex gap-2">
+          <select class="h-10 px-sm rounded-lg border border-outline-variant bg-surface font-body-md text-[14px]" id="reg-status-filter" onchange="loadRegistrations()">
+            <option value="">全部状态</option>
+            <option value="confirmed">已确认</option>
+            <option value="pending">待处理</option>
+            <option value="cancelled">已取消</option>
+            <option value="completed">已完成</option>
+          </select>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-surface border-b border-outline-variant">
+              <th class="p-sm font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">挂号日期</th>
+              <th class="p-sm font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">医生</th>
+              <th class="p-sm font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">科室</th>
+              <th class="p-sm font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">医院</th>
+              <th class="p-sm font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">时段</th>
+              <th class="p-sm font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">状态</th>
+              <th class="p-sm font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider text-right">操作</th>
+            </tr>
+          </thead>
+          <tbody id="reg-table-body" class="font-body-md text-body-md">
+            <tr><td colspan="7" class="p-lg text-center text-on-surface-variant">加载中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tab: Appointment Booking -->
+  <section class="tab-content hidden" id="tab-appointment">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-lg">
+      <!-- Step 1: Select Department -->
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant p-lg">
+        <h3 class="font-headline-md text-headline-md-mobile text-on-surface mb-sm flex items-center gap-xs">
+          <span class="material-symbols-outlined text-primary">search</span> 选择科室
+        </h3>
+        <div class="flex flex-col gap-sm" id="dept-list">
+          <p class="text-on-surface-variant text-center p-lg">加载中...</p>
+        </div>
+      </div>
+      <!-- Step 2: Select Doctor & Fill Info -->
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant p-lg">
+        <h3 class="font-headline-md text-headline-md-mobile text-on-surface mb-sm flex items-center gap-xs">
+          <span class="material-symbols-outlined text-primary">person_search</span> 选择医生
+        </h3>
+        <div id="doctor-list" class="flex flex-col gap-sm mb-md">
+          <p class="text-on-surface-variant text-center p-lg">请先选择科室</p>
+        </div>
+        <div id="booking-form" class="hidden">
+          <h4 class="font-label-md text-label-md text-on-surface mb-sm">填写挂号信息</h4>
+          <div class="flex flex-col gap-sm">
+            <input class="w-full h-12 px-sm rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none font-body-md" id="apt-name" placeholder="患者姓名*" required/>
+            <input class="w-full h-12 px-sm rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none font-body-md" id="apt-idcard" placeholder="身份证号*" required/>
+            <input class="w-full h-12 px-sm rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none font-body-md" id="apt-phone" placeholder="联系电话*" required/>
+            <textarea class="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none font-body-md" id="apt-symptom" placeholder="症状描述 (可选)" rows="2"></textarea>
+            <button class="w-full h-12 rounded-lg bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all font-label-md text-label-md shadow-md" onclick="submitAppointment()">
+              确认预约
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+// ========== Patient Personal Center Logic ==========
+let selectedDoctorId = null;
+let selectedHospitalId = null;
+let selectedDepartmentId = null;
+let historyPage = 1;
+let regPage = 1;
+const historyPageSize = 10;
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (!requireRole('patient')) return;
+  initTabs();
+  loadProfile();
+});
+
+// ========== Tab Management ==========
+function initTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      // Update active tab
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active', 'border-primary', 'text-primary', 'bg-surface-container-lowest');
+        b.classList.add('border-transparent', 'text-on-surface-variant');
+      });
+      btn.classList.add('active', 'border-primary', 'text-primary', 'bg-surface-container-lowest');
+      btn.classList.remove('border-transparent', 'text-on-surface-variant');
+      // Show tab content
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+      document.getElementById('tab-' + tab).classList.remove('hidden');
+      // Load tab data
+      if (tab === 'history') loadConsultationHistory();
+      if (tab === 'registrations') loadRegistrations();
+      if (tab === 'appointment') loadDepartments();
+    });
+  });
+}
+
+// ========== Profile ==========
+async function loadProfile() {
+  try {
+    const res = await PatientAPI.getProfile();
+    if (res.code === 200) {
+      const p = res.data;
+      document.getElementById('prof-user_name').value = p.user_name || '';
+      document.getElementById('prof-phone').value = p.phone || '';
+      document.getElementById('prof-gender').value = p.gender || '';
+      document.getElementById('prof-age').value = p.age || '';
+      document.getElementById('prof-blood_type').value = p.blood_type || '';
+      document.getElementById('prof-address').value = p.address || '';
+      document.getElementById('prof-allergy').value = (p.allergy_history || []).join(', ');
+      document.getElementById('prof-history').value = (p.medical_history || []).join(', ');
+    }
+  } catch (err) {
+    showToast('加载个人信息失败: ' + err.message, 'error');
+  }
+}
+
+async function saveProfile() {
+  const data = {
+    user_name: document.getElementById('prof-user_name').value.trim(),
+    gender: document.getElementById('prof-gender').value,
+    age: parseInt(document.getElementById('prof-age').value) || null,
+    address: document.getElementById('prof-address').value.trim(),
+    blood_type: document.getElementById('prof-blood_type').value,
+    allergy_history: document.getElementById('prof-allergy').value.split(',').map(s => s.trim()).filter(Boolean),
+    medical_history: document.getElementById('prof-history').value.split(',').map(s => s.trim()).filter(Boolean)
+  };
+
+  try {
+    const res = await PatientAPI.updateProfile(data);
+    if (res.code === 200) {
+      showToast('个人信息更新成功', 'success');
+    }
+  } catch (err) {
+    showToast('保存失败: ' + err.message, 'error');
+  }
+}
+
+// ========== Consultation History ==========
+async function loadConsultationHistory() {
+  const keyword = document.getElementById('history-search')?.value || '';
+  try {
+    const res = await PatientAPI.getConsultationHistory({
+      keyword, page: historyPage, page_size: historyPageSize
+    });
+    if (res.code === 200) {
+      renderHistoryTable(res.data);
+    }
+  } catch (err) {
+    showToast('加载咨询历史失败: ' + err.message, 'error');
+  }
+}
+
+function renderHistoryTable(data) {
+  const tbody = document.getElementById('history-table-body');
+  if (!data.list || data.list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="p-lg text-center text-on-surface-variant">暂无咨询记录</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.list.map(c => `
+    <tr class="border-b border-outline-variant hover:bg-surface-container/50 transition-colors">
+      <td class="p-sm text-on-surface-variant">${formatDate(c.created_at)}</td>
+      <td class="p-sm text-on-surface max-w-[200px] truncate">${escapeHtml(c.symptom_text || '-')}</td>
+      <td class="p-sm">
+        ${c.matched_disease ? `<span class="px-2 py-0.5 bg-primary/10 text-primary rounded-full text-[12px]">${escapeHtml(c.matched_disease)}</span>` : '-'}
+      </td>
+      <td class="p-sm text-on-surface-variant">${escapeHtml(c.matched_department || '-')}</td>
+      <td class="p-sm text-right">
+        <button class="text-primary hover:text-primary-container font-label-sm text-label-sm" onclick="viewConsultation('${c.consultation_id}')">详情</button>
+      </td>
+    </tr>
+  `).join('');
+
+  // Pagination
+  const totalPages = Math.ceil(data.total / historyPageSize);
+  document.getElementById('history-pagination').innerHTML = totalPages > 1 ? `
+    <button class="px-sm py-xs rounded border border-outline-variant hover:bg-surface-container transition-colors text-[14px]" onclick="historyPage--;loadConsultationHistory()" ${historyPage <= 1 ? 'disabled' : ''}>上一页</button>
+    <span class="px-sm py-xs text-[14px] text-on-surface-variant">第 ${historyPage}/${totalPages} 页 (共${data.total}条)</span>
+    <button class="px-sm py-xs rounded border border-outline-variant hover:bg-surface-container transition-colors text-[14px]" onclick="historyPage++;loadConsultationHistory()" ${historyPage >= totalPages ? 'disabled' : ''}>下一页</button>
+  ` : '';
+}
+
+async function viewConsultation(id) {
+  try {
+    const res = await PatientAPI.getConsultationDetail(id);
+    if (res.code === 200) {
+      const detail = res.data;
+      alert(`咨询详情:\n\n症状: ${detail.symptom_text || '-'}\n匹配疾病: ${detail.matched_disease || '-'}\n推荐科室: ${detail.matched_department || '-'}\n建议: ${detail.recommendation_detail || '-'}\n日期: ${formatDate(detail.created_at)}`);
+    }
+  } catch (err) {
+    showToast('加载详情失败', 'error');
+  }
+}
+
+// ========== Registrations ==========
+async function loadRegistrations() {
+  const status = document.getElementById('reg-status-filter')?.value || '';
+  try {
+    const res = await PatientAPI.getRegistrations(status || undefined, regPage, 10);
+    if (res.code === 200) {
+      renderRegTable(res.data);
+    }
+  } catch (err) {
+    showToast('加载挂号记录失败: ' + err.message, 'error');
+  }
+}
+
+function renderRegTable(data) {
+  const tbody = document.getElementById('reg-table-body');
+  if (!data.list || data.list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="p-lg text-center text-on-surface-variant">暂无挂号记录</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.list.map(r => {
+    const statusColors = {
+      confirmed: 'bg-secondary-container text-on-secondary-container',
+      pending: 'bg-tertiary-container text-on-tertiary',
+      cancelled: 'bg-error-container text-on-error-container',
+      completed: 'bg-surface-container text-on-surface-variant'
+    };
+    const statusText = { confirmed: '已确认', pending: '待处理', cancelled: '已取消', completed: '已完成' };
+    return `
+      <tr class="border-b border-outline-variant hover:bg-surface-container/50 transition-colors">
+        <td class="p-sm text-on-surface-variant">${r.date || '-'}</td>
+        <td class="p-sm text-on-surface">${escapeHtml(r.doctor_name || '-')}</td>
+        <td class="p-sm text-on-surface-variant">${escapeHtml(r.department || '-')}</td>
+        <td class="p-sm text-on-surface-variant">${escapeHtml(r.hospital || '-')}</td>
+        <td class="p-sm text-on-surface-variant">${escapeHtml(r.time_period || '-')}</td>
+        <td class="p-sm">
+          <span class="px-2 py-0.5 rounded-full text-[12px] font-medium ${statusColors[r.status] || 'bg-surface-container text-on-surface-variant'}">${statusText[r.status] || r.status}</span>
+        </td>
+        <td class="p-sm text-right">
+          ${r.status === 'confirmed' ? `<button class="text-error hover:text-error/80 font-label-sm text-label-sm" onclick="cancelReg('${r.registration_id}')">取消</button>` : '-'}
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+async function cancelReg(id) {
+  if (!confirm('确定要取消这个挂号吗？')) return;
+  try {
+    const res = await PatientAPI.cancelRegistration(id);
+    if (res.code === 200) {
+      showToast('挂号已取消', 'success');
+      loadRegistrations();
+    }
+  } catch (err) {
+    showToast('取消失败: ' + err.message, 'error');
+  }
+}
+
+// ========== Appointment Booking ==========
+async function loadDepartments() {
+  try {
+    const res = await CommonAPI.getDepartments();
+    if (res.code === 200) {
+      const deptList = document.getElementById('dept-list');
+      deptList.innerHTML = res.data.map(d => `
+        <div class="flex items-center justify-between p-sm rounded-lg border border-outline-variant hover:bg-surface-container-low transition-colors cursor-pointer" onclick="selectDepartment('${d.department_id}', '${escapeHtml(d.department_name)}')">
+          <div>
+            <span class="font-body-md text-on-surface">${escapeHtml(d.department_name)}</span>
+            <p class="text-[13px] text-on-surface-variant">${escapeHtml(d.description || '')}</p>
+          </div>
+          <span class="material-symbols-outlined text-outline">chevron_right</span>
+        </div>
+      `).join('');
+    }
+  } catch (err) {
+    showToast('加载科室失败: ' + err.message, 'error');
+  }
+}
+
+async function selectDepartment(deptId, deptName) {
+  selectedDepartmentId = deptId;
+  const doctorList = document.getElementById('doctor-list');
+  doctorList.innerHTML = '<p class="text-center p-lg"><span class="material-symbols-outlined animate-spin">progress_activity</span> 加载医生...</p>';
+  document.getElementById('booking-form').classList.add('hidden');
+
+  try {
+    const res = await PatientAPI.recommendDoctors(deptId);
+    if (res.code === 200 && res.data.list) {
+      doctorList.innerHTML = res.data.list.map(d => `
+        <div class="flex items-center justify-between p-sm rounded-lg border border-outline-variant hover:bg-surface-container-low transition-colors cursor-pointer" onclick="selectDoctor('${d.doctor_id}', '${d.hospital_id || 'hosp_001'}')">
+          <div>
+            <span class="font-body-md text-on-surface font-medium">${escapeHtml(d.doctor_name)} <span class="text-[13px] text-on-surface-variant">${escapeHtml(d.title || '')}</span></span>
+            <p class="text-[13px] text-on-surface-variant">${escapeHtml(d.hospital || '')} | ${escapeHtml(d.specialty || '')}</p>
+            <p class="text-[12px] text-outline">评分: ${d.rating || '-'} | 最近可约: ${d.next_available_date || '-'}</p>
+          </div>
+          <span class="material-symbols-outlined text-primary">event_available</span>
+        </div>
+      `).join('');
+    }
+  } catch (err) {
+    doctorList.innerHTML = '<p class="text-center p-lg text-error">加载失败</p>';
+  }
+}
+
+function selectDoctor(doctorId, hospitalId) {
+  selectedDoctorId = doctorId;
+  selectedHospitalId = hospitalId;
+  document.getElementById('booking-form').classList.remove('hidden');
+  // Pre-fill phone from profile
+  const userInfo = User.get();
+  if (userInfo) {
+    document.getElementById('apt-phone').value = userInfo.phone || '';
+    document.getElementById('apt-name').value = userInfo.user_name || '';
+  }
+}
+
+async function submitAppointment() {
+  if (!selectedDoctorId || !selectedDepartmentId || !selectedHospitalId) {
+    showToast('请先选择科室和医生', 'warning');
+    return;
+  }
+  const name = document.getElementById('apt-name').value.trim();
+  const idCard = document.getElementById('apt-idcard').value.trim();
+  const phone = document.getElementById('apt-phone').value.trim();
+  if (!name || !idCard || !phone) {
+    showToast('请填写患者姓名、身份证号和联系电话', 'warning');
+    return;
+  }
+
+  // Get a slot
+  let slotId = 'slot_001';
+  try {
+    const slotRes = await PatientAPI.getSlots(selectedDoctorId);
+    if (slotRes.code === 200 && slotRes.data.available_slots?.length > 0) {
+      slotId = slotRes.data.available_slots[0].slot_id;
+    }
+  } catch (e) { /* use default slot */ }
+
+  try {
+    const res = await PatientAPI.register({
+      slot_id: slotId,
+      doctor_id: selectedDoctorId,
+      hospital_id: selectedHospitalId,
+      department_id: selectedDepartmentId,
+      patient_name: name,
+      id_card: idCard,
+      phone: phone,
+      symptom_description: document.getElementById('apt-symptom')?.value?.trim() || ''
+    });
+    if (res.code === 200) {
+      showToast('预约成功！', 'success');
+      // Reset and switch to registrations tab
+      document.getElementById('booking-form').classList.add('hidden');
+      document.querySelector('[data-tab="registrations"]').click();
+    }
+  } catch (err) {
+    showToast('预约失败: ' + err.message, 'error');
+  }
+}
+
+// ========== Logout ==========
+async function handleLogout() {
+  await AuthAPI.logout();
+  Token.clear();
+  User.clear();
+  window.location.href = 'page1.html';
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+</script>
+</body></html>

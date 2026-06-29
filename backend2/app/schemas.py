@@ -25,14 +25,37 @@ class PatientLoginRequest(BaseModel):
     sms_id: str
 
 
+class PatientPasswordLoginRequest(BaseModel):
+    phone: str
+    password: str
+
+
+class PatientRegisterRequest(BaseModel):
+    phone: str
+    password: str
+    user_name: Optional[str] = None
+    gender: Optional[str] = None
+    age: Optional[int] = None
+
+
 class DoctorLoginRequest(BaseModel):
     user_name: str
-    password_hash: str
+    password: str
+
+
+class DoctorRegisterRequest(BaseModel):
+    user_name: str
+    password: str
+    phone: str
+    real_name: Optional[str] = None
+    department: Optional[str] = None
+    title: Optional[str] = None
+    hospital: Optional[str] = None
 
 
 class AdminLoginRequest(BaseModel):
     user_name: str
-    password_hash: str
+    password: str
 
 
 class RefreshTokenRequest(BaseModel):
