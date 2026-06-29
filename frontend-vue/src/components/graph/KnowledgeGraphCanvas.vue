@@ -9,11 +9,14 @@
       <p class="text-gray-500 text-[10px] mt-1">{{ typeLabel(tooltip.node.type) }}</p>
     </div>
     <!-- Legend -->
-    <div class="absolute bottom-3 left-3 flex gap-3 text-[10px] z-10 bg-black/60 backdrop-blur px-3 py-2 rounded-lg">
-      <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-disease"></span>疾病</span>
-      <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-symptom"></span>症状</span>
-      <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-drug"></span>药品</span>
-      <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-dept"></span>科室</span>
+    <div class="absolute bottom-4 left-4 z-10 bg-slate-800/90 backdrop-blur border border-white/15 rounded-xl px-4 py-3 shadow-lg">
+      <p class="text-white/60 text-[10px] uppercase tracking-wider mb-2 font-semibold">图例</p>
+      <div class="flex gap-4 text-xs text-white/85 font-medium">
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-disease ring-2 ring-white/20"></span>疾病</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-symptom ring-2 ring-white/20"></span>症状</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-drug ring-2 ring-white/20"></span>药品</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-dept ring-2 ring-white/20"></span>科室</span>
+      </div>
     </div>
   </div>
 </template>
