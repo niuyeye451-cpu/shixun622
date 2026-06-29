@@ -260,6 +260,12 @@ def refresh_token(request: RefreshTokenRequest):
     })
 
 
+@router.post("/auth/logout", response_model=ResponseModel)
+def logout(current_user: dict = Depends(get_current_user)):
+    """Clear token (stateless JWT — client should discard token)"""
+    return ResponseModel(data={"message": "已退出登录"}, message="退出成功")
+
+
 @router.post("/auth/password/change", response_model=ResponseModel)
 def change_password(request: ChangePasswordRequest, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     user_type = current_user.get("user_type")
@@ -287,8 +293,11 @@ def change_password(request: ChangePasswordRequest, current_user: dict = Depends
 
 
 @router.get("/departments", response_model=ResponseModel)
-def get_departments(db: Session = Depends(get_db)):
-    departments = db.query(Department).filter(Department.status == 1).order_by(Department.sort_order).all()
+def get_departments(keyword: str = None, db: Session = Depends(get_db)):
+    query = db.query(Department).filter(Department.status == 1)
+    if keyword:
+        query = query.filter(Department.dept_name.like(f"%{keyword}%"))
+    departments = query.order_by(Department.sort_order).all()
     return ResponseModel(data=[
         {
             "dept_id": d.dept_id,
@@ -325,11 +334,17 @@ def get_department_tree(db: Session = Depends(get_db)):
 
 
 @router.get("/hospitals", response_model=ResponseModel)
-def get_hospitals(dept_id: str = None, level: str = None, db: Session = Depends(get_db)):
+def get_hospitals(dept_id: str = None, department_id: str = None, level: str = None, city: str = None, db: Session = Depends(get_db)):
+    # Support both dept_id and department_id param names (frontend sends department_id)
+    effective_dept_id = dept_id or department_id
     query = db.query(Hospital).filter(Hospital.status == 1)
 
+    if effective_dept_id:
+        query = query.filter(Hospital.dept_list.like(f"%{effective_dept_id}%"))
     if level:
         query = query.filter(Hospital.hospital_level == level)
+    if city:
+        query = query.filter(Hospital.address.like(f"%{city}%"))
 
     hospitals = query.all()
     return ResponseModel(data=[
@@ -396,209 +411,3 @@ def submit_feedback(request: FeedbackCreate, current_user: dict = Depends(get_cu
     return ResponseModel(data={"feedback_id": feedback.feedback_id, "status": feedback.status})
 
 
-@router.get("/knowledge-graph/disease-graph", response_model=ResponseModel)
-def get_disease_graph(disease_name: str, max_depth: int = 2, db: Session = Depends(get_db)):
-    disease = db.query(MedicalEntity).filter(
-        MedicalEntity.name.like(f"%{disease_name}%"),
-        MedicalEntity.type == "disease"
-    ).first()
-
-    if not disease:
-        return ResponseModel(data={"nodes": [], "edges": [], "center_node": None})
-
-    nodes_map = {}
-    edges = []
-
-    nodes_map[disease.entity_id] = GraphNode(
-        id=disease.entity_id,
-        name=disease.name,
-        type=disease.type,
-        description=disease.description
-    )
-
-    current_ids = [disease.entity_id]
-
-    for depth in range(1, max_depth + 1):
-        next_ids = []
-        for entity_id in current_ids:
-            relations = db.query(MedicalRelation).filter(
-                MedicalRelation.source_entity_id == entity_id
-            ).limit(20).all()
-
-            for rel in relations:
-                target = db.query(MedicalEntity).filter(
-                    MedicalEntity.entity_id == rel.target_entity_id
-                ).first()
-
-                if target:
-                    if target.entity_id not in nodes_map:
-                        nodes_map[target.entity_id] = GraphNode(
-                            id=target.entity_id,
-                            name=target.name,
-                            type=target.type,
-                            description=target.description
-                        )
-                        next_ids.append(target.entity_id)
-
-                    edges.append(GraphEdge(
-                        id=rel.relation_id,
-                        source=rel.source_entity_id,
-                        target=rel.target_entity_id,
-                        relation=rel.relation_type,
-                        relation_name=rel.relation_name
-                    ))
-
-        current_ids = next_ids
-        if not current_ids:
-            break
-
-    return ResponseModel(data=GraphResponse(
-        nodes=list(nodes_map.values()),
-        edges=edges,
-        center_node=disease.entity_id
-    ))
-
-
-@router.get("/knowledge-graph/entities/search", response_model=ResponseModel)
-def search_entities(keyword: str, entity_type: str = None, limit: int = 20, offset: int = 0, db: Session = Depends(get_db)):
-    from sqlalchemy import or_
-    query = db.query(MedicalEntity).filter(
-        or_(
-            MedicalEntity.name.like(f"%{keyword}%"),
-            MedicalEntity.aliases.like(f"%{keyword}%")
-        )
-    )
-
-    if entity_type:
-        query = query.filter(MedicalEntity.type == entity_type)
-
-    total = query.count()
-    entities = query.order_by(MedicalEntity.name).offset(offset).limit(limit).all()
-
-    results = []
-    for entity in entities:
-        aliases = []
-        if entity.aliases:
-            aliases = entity.aliases.split(",")
-        results.append(EntitySearchResponse(
-            entity_id=entity.entity_id,
-            name=entity.name,
-            type=entity.type,
-            aliases=aliases,
-            description=entity.description
-        ))
-
-    return ResponseModel(data={"total": total, "entities": results})
-
-
-@router.get("/knowledge-graph/entities/{entity_id}", response_model=ResponseModel)
-def get_entity_detail(entity_id: str, db: Session = Depends(get_db)):
-    entity = db.query(MedicalEntity).filter(MedicalEntity.entity_id == entity_id).first()
-    if not entity:
-        raise HTTPException(status_code=404, detail="实体不存在")
-
-    aliases = []
-    if entity.aliases:
-        aliases = entity.aliases.split(",")
-
-    attributes = {}
-    if entity.attributes:
-        try:
-            import json
-            attributes = json.loads(entity.attributes)
-        except:
-            pass
-
-    return ResponseModel(data=EntityDetailResponse(
-        entity_id=entity.entity_id,
-        name=entity.name,
-        type=entity.type,
-        aliases=aliases,
-        description=entity.description,
-        source_version=entity.source_version,
-        version_number=entity.version_number,
-        attributes=attributes
-    ))
-
-
-@router.get("/knowledge-graph/entities/{entity_id}/relations", response_model=ResponseModel)
-def get_entity_relations(entity_id: str, relation_type: str = None, direction: str = "both", limit: int = 50, db: Session = Depends(get_db)):
-    entity = db.query(MedicalEntity).filter(MedicalEntity.entity_id == entity_id).first()
-    if not entity:
-        raise HTTPException(status_code=404, detail="实体不存在")
-
-    relations = []
-    entities_map = {}
-    entities_map[entity_id] = {"id": entity.entity_id, "name": entity.name, "type": entity.type}
-
-    if direction in ["out", "both"]:
-        query = db.query(MedicalRelation).filter(MedicalRelation.source_entity_id == entity_id)
-        if relation_type:
-            query = query.filter(MedicalRelation.relation_type == relation_type)
-        out_rels = query.limit(limit).all()
-
-        for rel in out_rels:
-            target = db.query(MedicalEntity).filter(MedicalEntity.entity_id == rel.target_entity_id).first()
-            if target:
-                entities_map[target.entity_id] = {"id": target.entity_id, "name": target.name, "type": target.type}
-                relations.append({
-                    "relation_id": rel.relation_id,
-                    "source": rel.source_entity_id,
-                    "target": rel.target_entity_id,
-                    "relation_type": rel.relation_type,
-                    "relation_name": rel.relation_name,
-                    "text": rel.text
-                })
-
-    if direction in ["in", "both"]:
-        query = db.query(MedicalRelation).filter(MedicalRelation.target_entity_id == entity_id)
-        if relation_type:
-            query = query.filter(MedicalRelation.relation_type == relation_type)
-        in_rels = query.limit(limit).all()
-
-        for rel in in_rels:
-            source = db.query(MedicalEntity).filter(MedicalEntity.entity_id == rel.source_entity_id).first()
-            if source:
-                entities_map[source.entity_id] = {"id": source.entity_id, "name": source.name, "type": source.type}
-                relations.append({
-                    "relation_id": rel.relation_id,
-                    "source": rel.source_entity_id,
-                    "target": rel.target_entity_id,
-                    "relation_type": rel.relation_type,
-                    "relation_name": rel.relation_name,
-                    "text": rel.text
-                })
-
-    return ResponseModel(data={"relations": relations, "entities": list(entities_map.values())})
-
-
-@router.get("/knowledge-graph/statistics", response_model=ResponseModel)
-def get_graph_statistics(db: Session = Depends(get_db)):
-    total_entities = db.query(MedicalEntity).count()
-    total_relations = db.query(MedicalRelation).count()
-
-    from sqlalchemy import func
-    entity_type_results = db.query(
-        MedicalEntity.type,
-        func.count(MedicalEntity.entity_id)
-    ).group_by(MedicalEntity.type).all()
-
-    type_counts = {}
-    for et in entity_type_results:
-        type_counts[et[0]] = et[1]
-
-    relation_type_results = db.query(
-        MedicalRelation.relation_type,
-        func.count(MedicalRelation.relation_id)
-    ).group_by(MedicalRelation.relation_type).all()
-
-    rel_type_counts = {}
-    for rt in relation_type_results:
-        rel_type_counts[rt[0]] = rt[1]
-
-    return ResponseModel(data={
-        "total_entities": total_entities,
-        "total_relations": total_relations,
-        "entity_type_counts": type_counts,
-        "relation_type_counts": rel_type_counts
-    })

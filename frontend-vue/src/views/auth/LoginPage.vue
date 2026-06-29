@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen w-screen flex flex-col md:flex-row overflow-hidden" style="font-family: 'Inter', sans-serif;">
+  <div class="h-screen w-screen flex flex-col md:flex-row overflow-hidden">
     <!-- Left: Brand Panel (60% desktop, hidden mobile) -->
     <div class="hidden md:flex md:w-[60%] relative bg-primary overflow-hidden items-center justify-center flex-col text-on-primary">
       <div class="absolute inset-0 z-0 opacity-40 mix-blend-overlay" style="background-image: radial-gradient(circle at center, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 32px 32px;">
@@ -20,11 +20,11 @@
       </div>
       <div class="z-10 text-center px-12 max-w-2xl -mt-12">
         <div class="mb-12">
-          <h1 class="text-[48px] font-bold tracking-tight flex items-center justify-center gap-3 mb-3" style="font-family: 'Inter', sans-serif;">
+          <h1 class="text-[48px] font-bold tracking-tight flex items-center justify-center gap-3 mb-3">
             <span class="material-symbols-outlined text-[56px]" style="font-variation-settings: 'FILL' 1;">hub</span>
             MedGraph AI
           </h1>
-          <p class="text-2xl font-light text-on-primary-container" style="font-family: 'Inter', sans-serif;">构建精准医疗知识图谱，赋能临床决策与科研创新。</p>
+          <p class="text-2xl font-light text-on-primary-container">构建精准医疗知识图谱，赋能临床决策与科研创新。</p>
         </div>
         <div class="flex flex-col gap-4 w-full max-w-md mx-auto">
           <div v-for="role in roles" :key="role.key" @click="switchRole(role.key)"
@@ -33,7 +33,7 @@
             <div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-container-lowest flex-shrink-0">
               <img :alt="role.label" class="w-full h-full object-cover" :src="roleAvatar(role.key)" />
             </div>
-            <span class="text-xl font-semibold" style="font-family: 'Inter', sans-serif;">{{ role.label }}</span>
+            <span class="text-xl font-semibold">{{ role.label }}</span>
           </div>
         </div>
       </div>
@@ -59,48 +59,48 @@
 
       <div class="w-full max-w-md bg-surface-container-lowest border border-surface-variant rounded-xl p-8 flex flex-col gap-6 shadow-sm">
         <div class="text-center">
-          <h2 class="text-[24px] md:text-[32px] text-on-surface font-semibold" style="font-family: 'Inter', sans-serif;">{{ roleLabel }}登录</h2>
+          <h2 class="text-[24px] md:text-[32px] text-on-surface font-semibold">{{ roleLabel }}登录</h2>
           <p class="text-base text-on-surface-variant mt-1">{{ roleDesc }}</p>
-          <p v-if="selectedRole !== 'patient'" class="text-outline text-xs mt-1 bg-surface-container px-2 py-1 rounded inline-block">测试账号: <b>{{ selectedRole === 'doctor' ? 'doctor01' : 'admin' }}</b> / 密码: <b>123456</b></p>
+          <p v-if="selectedRole !== 'patient'" class="text-outline text-xs mt-1 bg-surface-container px-2 py-1 rounded inline-block">测试账号: <b>{{ selectedRole === 'doctor' ? 'doctor01' : 'admin' }}</b> / 密码: <b>{{ selectedRole === 'doctor' ? '123456' : 'admin123' }}</b></p>
         </div>
 
         <form @submit.prevent="handleLogin" class="flex flex-col gap-4">
           <div v-if="selectedRole === 'patient'">
-            <label class="text-xs text-on-surface-variant font-semibold" style="font-family: 'JetBrains Mono', monospace;">手机号码</label>
+            <label class="text-xs text-on-surface-variant font-semibold">手机号码</label>
             <div class="relative mt-1">
               <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">phone_iphone</span>
               <input v-model="phone" class="w-full h-12 pl-10 pr-4 rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="请输入11位手机号码" type="tel" maxlength="11" />
             </div>
           </div>
           <div v-if="selectedRole === 'patient'">
-            <label class="text-xs text-on-surface-variant font-semibold" style="font-family: 'JetBrains Mono', monospace;">验证码 (演示: <b>123456</b>)</label>
+            <label class="text-xs text-on-surface-variant font-semibold">验证码 (演示: <b>123456</b>)</label>
             <div class="flex gap-2 mt-1">
               <div class="relative flex-1">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">lock</span>
                 <input v-model="code" class="w-full h-12 pl-10 pr-4 rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="6位验证码" maxlength="6" />
               </div>
-              <button type="button" @click="sendSms" :disabled="smsCountdown > 0" class="px-4 h-12 rounded-lg border border-primary text-primary hover:bg-primary-container whitespace-nowrap text-sm font-medium" style="font-family: 'JetBrains Mono', monospace;">
+              <button type="button" @click="sendSms" :disabled="smsCountdown > 0" class="px-4 h-12 rounded-lg border border-primary text-primary hover:bg-primary-container whitespace-nowrap text-sm font-medium">
                 {{ smsCountdown > 0 ? `${smsCountdown}s后重发` : '获取验证码' }}
               </button>
             </div>
           </div>
 
           <div v-if="selectedRole !== 'patient'">
-            <label class="text-xs text-on-surface-variant font-semibold" style="font-family: 'JetBrains Mono', monospace;">用户名</label>
+            <label class="text-xs text-on-surface-variant font-semibold">用户名</label>
             <div class="relative mt-1">
               <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">person</span>
               <input v-model="username" class="w-full h-12 pl-10 pr-4 rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none" :placeholder="selectedRole === 'doctor' ? 'doctor01' : 'admin'" />
             </div>
           </div>
           <div v-if="selectedRole !== 'patient'">
-            <label class="text-xs text-on-surface-variant font-semibold" style="font-family: 'JetBrains Mono', monospace;">密码</label>
+            <label class="text-xs text-on-surface-variant font-semibold">密码</label>
             <div class="relative mt-1">
               <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">lock</span>
-              <input v-model="password" class="w-full h-12 pl-10 pr-4 rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="123456" type="password" />
+              <input v-model="password" class="w-full h-12 pl-10 pr-4 rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none" :placeholder="selectedRole === 'doctor' ? '123456' : 'admin123'" type="password" />
             </div>
           </div>
 
-          <button type="submit" :disabled="loading" class="w-full h-12 mt-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all font-medium shadow-[0_4px_12px_rgba(0,61,155,0.15)] flex justify-center items-center gap-2" style="font-family: 'JetBrains Mono', monospace;">
+          <button type="submit" :disabled="loading" class="w-full h-12 mt-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all font-medium shadow-[0_4px_12px_rgba(0,61,155,0.15)] flex justify-center items-center gap-2">
             <span v-if="loading" class="material-symbols-outlined animate-spin text-lg">progress_activity</span>
             {{ loading ? '登录中...' : '登 录' }}
           </button>
@@ -109,7 +109,7 @@
 
       <!-- Disclaimer -->
       <div class="absolute bottom-4 md:bottom-10 w-full text-center px-6">
-        <p class="text-xs text-outline" style="font-family: 'Inter', sans-serif;">非法访问与医疗数据免责警告：本系统仅供授权医务人员及研究者使用。所有操作均被记录审计。未授权访问将面临法律追责。</p>
+        <p class="text-xs text-outline">非法访问与医疗数据免责警告：本系统仅供授权医务人员及研究者使用。所有操作均被记录审计。未授权访问将面临法律追责。</p>
       </div>
     </div>
   </div>

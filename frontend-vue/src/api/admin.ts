@@ -104,7 +104,14 @@ export const adminApi = {
     return request('put', `/admin/feedbacks/${id}/reply?reply=${encodeURIComponent(reply)}`)
   },
 
+  getFeedbackDetail(id: string) {
+    return request<Feedback>('get', `/admin/feedbacks/${id}`)
+  },
+
   // Unknown Questions
+  getUnknownQuestionDetail(id: string) {
+    return request('get', `/admin/unknown-questions/${id}`)
+  },
   getUnknownQuestions(params?: Record<string, any>) {
     return request('get', '/admin/unknown-questions', params)
   },

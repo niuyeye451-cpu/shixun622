@@ -60,43 +60,8 @@
 
     <!-- Import -->
     <div v-if="activeTab==='import'" class="flex flex-col gap-6">
-      <div class="border-2 border-dashed border-primary/30 bg-primary-fixed/30 rounded-xl p-12 flex flex-col items-center justify-center cursor-pointer hover:bg-primary-fixed/50 transition-colors">
+      <div class="border-2 border-dashed border-primary/30 bg-primary-fixed/30 rounded-xl p-12 flex flex-col items-center justify-center cursor-pointer hover:bg-primary-fixed/50 transition-colors" @click="handleImportUpload">
         <span class="material-symbols-outlined text-6xl text-primary mb-3">cloud_upload</span><h3 class="text-lg font-semibold mb-1">拖拽文件至此，或点击上传</h3><p class="text-sm text-on-surface-variant">JSON, CSV, XML (最大 500MB)</p>
-      </div>
-      <!-- PRD: Data Pre-check Table with status badges -->
-      <div class="bg-surface-container-lowest rounded-xl border overflow-hidden">
-        <div class="p-3 border-b bg-surface-container-low flex justify-between items-center">
-          <h3 class="text-sm font-semibold text-on-surface">预检任务列表</h3>
-          <div class="flex gap-2">
-            <span class="px-3 py-1 bg-surface text-on-surface-variant rounded-full text-xs border border-outline-variant">全部 (3)</span>
-            <span class="px-3 py-1 bg-error-container text-on-error-container rounded-full text-xs border border-error/20">冲突 (1)</span>
-          </div>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm">
-            <thead><tr class="bg-surface border-b"><th class="p-3 text-xs uppercase text-on-surface-variant">文件名</th><th class="p-3 text-xs uppercase text-on-surface-variant">实体数量</th><th class="p-3 text-xs uppercase text-on-surface-variant">状态</th><th class="p-3 text-xs uppercase text-on-surface-variant text-right">操作</th></tr></thead>
-            <tbody>
-              <tr class="border-b hover:bg-surface-container/50 transition-colors">
-                <td class="p-3 text-on-surface flex items-center gap-2"><span class="material-symbols-outlined text-outline text-lg">description</span> cardiology_guidelines_2023.json</td>
-                <td class="p-3 text-on-surface-variant">1,245</td>
-                <td class="p-3"><span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container text-xs"><span class="material-symbols-outlined text-sm">check_circle</span> 校验通过</span></td>
-                <td class="p-3 text-right"><button class="text-primary hover:underline text-xs">查看</button></td>
-              </tr>
-              <tr class="border-b bg-tertiary-fixed/20 hover:bg-tertiary-fixed/30 transition-colors">
-                <td class="p-3 text-on-surface flex items-center gap-2"><span class="material-symbols-outlined text-tertiary text-lg">description</span> pediatric_dosage_v2.csv</td>
-                <td class="p-3 text-on-surface-variant">890</td>
-                <td class="p-3"><span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-tertiary-container text-on-tertiary text-xs"><span class="material-symbols-outlined text-sm">warning</span> 格式异常</span></td>
-                <td class="p-3 text-right"><button class="text-primary hover:underline text-xs">修复</button></td>
-              </tr>
-              <tr class="border-b bg-error-container/30 hover:bg-error-container/50 transition-colors">
-                <td class="p-3 text-on-surface flex items-center gap-2"><span class="material-symbols-outlined text-error text-lg">description</span> drug_interactions_db.xml</td>
-                <td class="p-3 text-on-surface-variant">4,502</td>
-                <td class="p-3"><span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-error text-on-error text-xs"><span class="material-symbols-outlined text-sm">error</span> 重复冲突</span></td>
-                <td class="p-3 text-right"><button class="text-primary hover:underline text-xs">解决冲突</button></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div class="bg-surface-container-lowest rounded-xl border p-4 flex flex-col items-center">
@@ -104,8 +69,28 @@
           <div class="w-36 h-36 rounded-full border-[14px] border-surface-variant relative flex items-center justify-center" style="border-top-color:#003d9b;border-right-color:#7cf8da;border-bottom-color:#ffb950;transform:rotate(-45deg)"><div style="transform:rotate(45deg)" class="text-center"><span class="text-2xl font-bold">{{ entities.length||'-' }}</span><span class="text-xs block">实体总数</span></div></div>
         </div>
         <div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border p-4"><h3 class="font-semibold mb-3">待一键补全未知问题</h3>
-          <div class="space-y-2" v-if="unknownList.length"><div v-for="(q,i) in unknownList" :key="q.question_id" class="flex justify-between items-center p-3 rounded-lg bg-surface border"><div class="flex items-center gap-3"><span class="font-bold text-sm">{{ i+1 }}</span><span class="text-sm truncate max-w-[300px]">{{ q.text }}</span><span class="px-2 py-0.5 text-xs bg-tertiary-container text-on-tertiary rounded-full">频次:{{ q.occur_count }}</span></div><button @click="resolveUnknown(q.question_id)" class="px-3 py-1 bg-primary text-on-primary rounded-lg text-xs">一键补全</button></div></div>
+          <div class="space-y-2" v-if="unknownList.length"><div v-for="(q,i) in unknownList" :key="q.question_id" class="flex justify-between items-center p-3 rounded-lg bg-surface border"><div class="flex items-center gap-3 cursor-pointer flex-1 min-w-0" @click="viewUnknownDetail(q.question_id)"><span class="font-bold text-sm flex-shrink-0">{{ i+1 }}</span><span class="text-sm truncate max-w-[300px]">{{ q.text }}</span><span class="px-2 py-0.5 text-xs bg-tertiary-container text-on-tertiary rounded-full flex-shrink-0">频次:{{ q.occur_count }}</span></div><button @click="resolveUnknown(q.question_id)" class="px-3 py-1 bg-primary text-on-primary rounded-lg text-xs flex-shrink-0 ml-2">一键补全</button></div></div>
           <p v-else class="text-center p-6 text-on-surface-variant">暂无待一键补全问题</p>
+        </div>
+
+        <!-- Unknown Question Detail Modal -->
+        <div v-if="uqDetail" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" @click.self="uqDetail = null">
+          <div class="bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto animate-fade-in">
+            <div class="p-4 border-b flex justify-between items-center">
+              <h3 class="font-semibold text-on-surface flex items-center gap-2"><span class="material-symbols-outlined text-primary">help</span> 未知问题详情</h3>
+              <button @click="uqDetail = null" class="p-1 rounded-full hover:bg-surface-container text-on-surface-variant"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="p-4 space-y-3 text-sm">
+              <div><span class="text-on-surface-variant block mb-1">问题内容</span><p class="bg-surface-container rounded-lg p-3 text-on-surface">{{ uqDetail.text }}</p></div>
+              <div class="flex justify-between"><span class="text-on-surface-variant">来源角色</span><span class="px-2 py-0.5 rounded-full text-xs" :class="uqDetail.source_role==='doctor'?'bg-primary/10 text-primary':'bg-surface-container text-on-surface-variant'">{{ uqDetail.source_role==='patient'?'患者':'医师' }}</span></div>
+              <div class="flex justify-between"><span class="text-on-surface-variant">分类</span><span class="text-on-surface-variant">{{ uqDetail.category||'-' }}</span></div>
+              <div class="flex justify-between"><span class="text-on-surface-variant">出现次数</span><span class="font-medium text-tertiary">{{ uqDetail.occur_count }}</span></div>
+              <div class="flex justify-between"><span class="text-on-surface-variant">首次出现</span><span class="text-on-surface-variant">{{ uqDetail.occur_time?.slice(0,19) }}</span></div>
+              <div v-if="uqDetail.related_conversation_id" class="flex justify-between"><span class="text-on-surface-variant">关联对话</span><span class="text-on-surface-variant font-mono text-xs">{{ uqDetail.related_conversation_id }}</span></div>
+              <div v-if="uqDetail.resolved_answer"><span class="text-on-surface-variant block mb-1">已补充答案</span><p class="bg-secondary-container/30 rounded-lg p-3 text-on-surface">{{ uqDetail.resolved_answer }}</p></div>
+              <div v-if="uqDetail.resolved_at" class="flex justify-between"><span class="text-on-surface-variant">解决时间</span><span class="text-on-surface-variant">{{ uqDetail.resolved_at?.slice(0,19) }}</span></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -122,6 +107,7 @@ const activeTab = ref('entities')
 const tabs = [{key:'entities',label:'实体管理'},{key:'relations',label:'关系管理'},{key:'synonyms',label:'同义词库'},{key:'versions',label:'版本管理'},{key:'import',label:'数据导入'}]
 const entSearch = ref(''); const entType = ref(''); const relType = ref(''); const synSearch = ref('')
 const unknownList = ref<any[]>([])
+const uqDetail = ref<any>(null)
 const entities = computed(() => store.entities); const relations = computed(() => store.relations)
 const synonyms = computed(() => store.synonyms); const versions = computed(() => store.versions)
 
@@ -141,6 +127,8 @@ async function delSynonym(id:string) { if(!confirm('确定删除?')) return; try
 function openCreateVersion() { const v=prompt('版本号:'); if(!v) return; adminApi.createVersion({version_number:v,update_content:prompt('描述:')||''}).then(()=>loadVersions()).catch(e=>alert(e.message)) }
 async function pubVersion(id:string) { try { await adminApi.publishVersion(id); loadVersions(); alert('发布成功') } catch(e:any){alert(e.message)} }
 async function resolveUnknown(id:string) { const a=prompt('答案:'); if(!a) return; try { await adminApi.resolveUnknownQuestion(id,{resolved_answer:a,add_to_knowledge:false}); loadUnknown(); alert('一键补全成功') } catch(e:any){alert(e.message)} }
+async function viewUnknownDetail(id:string) { try { const r = await adminApi.getUnknownQuestionDetail(id); if (r.code===200) uqDetail.value = r.data } catch(e:any){alert(e.message)} }
+function handleImportUpload() { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,.csv,.xml'; inp.onchange = () => { if (inp.files?.[0]) alert(`已选择: ${inp.files[0].name} — 后端导入接口开发中，请联系管理员`) }; inp.click() }
 
 onMounted(async () => { await loadEntities(); await loadRelations(); await loadSynonyms(); await loadVersions(); await loadUnknown() })
 </script>

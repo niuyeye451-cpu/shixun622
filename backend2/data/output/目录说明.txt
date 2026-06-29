@@ -1,0 +1,34 @@
+output 目录结构说明
+==================================================
+
+核心数据/
+  - medical_clean.json     清洗后的疾病数据（8807条）
+  - triplets.csv           三元组（45.9万条，名称版）
+  - triplets_with_id.csv   三元组（ID版，图谱组直接用）
+
+实体词典/
+  - Disease.txt            疾病词典（8807个）
+  - Symptom.txt            症状词典（5995个）
+  - Drug.txt               药品词典（3828个）
+  - Check.txt              检查项目词典（3353个）
+  - Department.txt         科室词典（54个）
+  - CureWay.txt            治疗方式词典（544个）
+  - Producer.txt           药品厂商词典（17201个）
+  - Food.txt               全部食物名称（4868个）
+  - 宜吃食物.txt           宜吃食物（247个）
+  - 忌吃食物.txt           忌吃食物（240个）
+  - 推荐食谱.txt           推荐食谱（4504个）
+
+同义词表/
+  - synonym_full.json      完整同义词词典
+  - synonym_alias.json     别名→标准名映射（问答召回用）
+  - synonym_report.md      同义词挖掘报告
+
+ID映射/
+  - entity_id_map.json     44650个实体ID映射（节点主键）
+
+数据报告/
+  - data_entity_mapping.md  数据-实体映射交接文档
+  - data_quality_report.md  数据质量报告
+  - entity_id_report.md     实体ID分配报告
+  - task_summary_report.md  任务总结报告

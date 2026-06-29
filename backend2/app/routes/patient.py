@@ -11,6 +11,7 @@ from app.schemas import (
 )
 from app.utils import generate_id, list_to_json_str, json_str_to_list
 from app.dependencies import get_patient_user
+from app.services.ai_service import inference
 
 router = APIRouter(prefix="/api/v1/patient", tags=["patient"])
 
@@ -96,18 +97,36 @@ def send_message(conversation_id: str, request: SendMessageRequest, current_user
     )
     db.add(user_message)
     db.commit()
-    
+
+    # 调用 AI 推理管线
+    result = inference(request.content, role="patient")
+
+    reasoning_path = ["关键词提取", "知识图谱检索", "AI生成回答"] if result["is_ai_generated"] else ["关键词提取", "知识图谱检索"]
+
     assistant_message = Message(
         message_id=generate_id("msg_"),
         conversation_id=conversation_id,
         sender_role="assistant",
-        content=f"收到您的信息：{request.content}。根据您的描述，建议您...",
-        reasoning_path='["症状补充分析", "疾病重新匹配", "鉴别诊断"]',
-        answer_source="rag"
+        content=result["answer"],
+        reasoning_path=list_to_json_str(reasoning_path),
+        answer_source="ai+kb" if result["is_ai_generated"] else "kb"
     )
     db.add(assistant_message)
     db.commit()
-    
+
+    # 提取匹配的疾病和科室（若有关联数据）
+    disease_matches = [k for k in result.get("knowledge", []) if k.get("type") == "Disease"]
+    matched_disease = disease_matches[0]["name"] if disease_matches else None
+    related_diseases = [
+        {"entity_id": d["entity_id"], "name": d["name"], "probability": 0.5}
+        for d in disease_matches[:3]
+    ]
+
+    dept_matches = [k for k in result.get("knowledge", [])
+                    for r in k.get("related", [])
+                    if r.get("target_type") == "Department"]
+    matched_department = dept_matches[0]["target_name"] if dept_matches else None
+
     return ResponseModel(data={
         "message_id": user_message.message_id,
         "role": "user",
@@ -118,12 +137,12 @@ def send_message(conversation_id: str, request: SendMessageRequest, current_user
             "message_id": assistant_message.message_id,
             "role": "assistant",
             "content": assistant_message.content,
-            "reasoning_path": ["症状补充分析", "疾病重新匹配", "鉴别诊断"],
+            "reasoning_path": reasoning_path,
             "answer_source": assistant_message.answer_source,
-            "matched_disease": "偏头痛",
-            "matched_department": "神经内科",
-            "recommendation_detail": "建议您尽快到神经内科就诊",
-            "related_diseases": [{"entity_id": "ent_001", "name": "偏头痛", "probability": 0.75}],
+            "matched_disease": matched_disease,
+            "matched_department": matched_department,
+            "recommendation_detail": f"建议您到{matched_department}就诊" if matched_department else "详情请咨询专业医生",
+            "related_diseases": related_diseases,
             "created_at": assistant_message.created_at
         }
     })
@@ -221,13 +240,29 @@ def get_conversation_list(page: int = 1, page_size: int = 10, session_type: str 
 
 @router.post("/consultation/symptom/quick", response_model=ResponseModel)
 def quick_symptom_query(request: QuickSymptomRequest, current_user: dict = Depends(get_patient_user)):
+    query = request.symptom_text
+    if request.age:
+        query += f"，年龄{request.age}岁"
+    if request.gender:
+        query += f"，{request.gender}性"
+
+    result = inference(query, role="patient")
+
+    disease_matches = [k for k in result.get("knowledge", []) if k.get("type") == "Disease"]
+    matched_diseases = []
+    for d in disease_matches[:5]:
+        matched_diseases.append({
+            "disease_id": d["entity_id"],
+            "disease_name": d["name"],
+            "probability": 0.5,
+            "department": next((r["target_name"] for r in d.get("related", [])
+                               if r.get("target_type") == "Department"), None)
+        })
+
     return ResponseModel(data={
-        "answer": f"根据您描述的症状 '{request.symptom_text}'，可能的疾病包括偏头痛、紧张性头痛等。",
-        "matched_diseases": [
-            {"disease_id": "ent_001", "disease_name": "偏头痛", "probability": 0.72, "department": "神经内科"},
-            {"disease_id": "ent_002", "disease_name": "紧张性头痛", "probability": 0.55, "department": "神经内科"}
-        ],
-        "recommended_department": "神经内科"
+        "answer": result["answer"],
+        "matched_diseases": matched_diseases,
+        "recommended_department": matched_diseases[0]["department"] if matched_diseases and matched_diseases[0].get("department") else None
     })
 
 

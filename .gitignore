@@ -42,3 +42,11 @@ frontend-vue/dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Large data files (imported at runtime)
+backend2/data/output/核心数据/
+backend2/data/output/ID映射/
+backend2/data/output/新数据爬取/
+backend2/data/QASystemOnMedicalKG/
+backend2/neo4j_import.log
+backend2/data/output/neo4j_import.log

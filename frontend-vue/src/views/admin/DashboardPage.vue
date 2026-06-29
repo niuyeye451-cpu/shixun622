@@ -2,9 +2,6 @@
   <div class="p-[16px] md:p-[40px] max-w-[1600px] mx-auto">
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl md:text-3xl font-bold">管理仪表盘</h1>
-      <button @click="handleExport" class="flex items-center gap-1 px-4 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-sm text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors shadow-sm">
-        <span class="material-symbols-outlined text-lg">download</span> 导出报表
-      </button>
     </div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
       <div @click="$router.push('/admin/users')" class="bg-surface-container-lowest rounded-xl border p-4 cursor-pointer hover:shadow-md transition-shadow">
@@ -49,5 +46,5 @@
 import { useStatsStore } from '@/stores/stats'; import { onMounted } from 'vue'
 const stats = useStatsStore()
 onMounted(async () => { await stats.loadDashboard(); await stats.loadEntityStats() })
-function handleExport() { alert('报表导出功能开发中（Phase 3）') }
+
 </script>

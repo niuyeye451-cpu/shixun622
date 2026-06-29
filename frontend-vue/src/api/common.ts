@@ -25,11 +25,7 @@ export const commonApi = {
   },
 
   searchEntities(keyword: string, entityType?: string, limit = 10) {
-    return request<any>('get', '/common/knowledge-graph/entities/search', { keyword, entity_type: entityType, limit }).then(r => {
-      // system3 wraps in {total, entities}
-      if (r.code === 200 && r.data.entities) r.data = r.data.entities
-      return r
-    })
+    return request<any>('get', '/common/knowledge-graph/entities/search', { keyword, entity_type: entityType, limit })
   },
 
   getEntityDetail(entityId: string) {

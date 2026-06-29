@@ -5,6 +5,16 @@
 1. [概述](#概述)
 2. [通用规范](#通用规范)
 3. [公共接口 - 认证模块](#公共接口---认证模块)
+   - [发送短信验证码](#1-发送短信验证码)
+   - [患者验证码登录](#2-患者验证码登录)
+   - [患者密码登录](#3-患者密码登录)
+   - [患者注册](#4-患者注册)
+   - [医师登录](#5-医师登录)
+   - [医师注册](#6-医师注册)
+   - [管理员登录](#7-管理员登录)
+   - [刷新Token](#8-刷新token)
+   - [登出](#9-登出)
+   - [修改密码](#10-修改密码)
 4. [公共接口 - 通用模块](#公共接口---通用模块)
 5. [公共接口 - 知识图谱模块](#公共接口---知识图谱模块)
 6. [患者端 API](#患者端-api)
@@ -117,7 +127,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 2. 患者登录
+### 2. 患者验证码登录
 
 **接口**: `POST /api/v1/common/auth/patient/login`
 
@@ -154,7 +164,99 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 3. 医师登录
+### 3. 患者密码登录
+
+**接口**: `POST /api/v1/common/auth/patient/login-password`
+
+**描述**: 患者手机号密码登录
+
+**请求体**:
+```json
+{
+  "phone": "13800138000",
+  "password": "123456"
+}
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| phone | string | 是 | 手机号 |
+| password | string | 是 | 密码（明文，后端自动哈希存储） |
+
+**响应**:
+```json
+{
+  "code": 200,
+  "message": "登录成功",
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+    "expires_in": 7200,
+    "user_info": {
+      "patient_id": "pat_001",
+      "user_name": "张三",
+      "phone": "13800138000",
+      "gender": "男",
+      "age": 30,
+      "status": 1,
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  }
+}
+```
+
+---
+
+### 4. 患者注册
+
+**接口**: `POST /api/v1/common/auth/patient/register`
+
+**描述**: 患者账号注册
+
+**请求体**:
+```json
+{
+  "phone": "13800138000",
+  "password": "123456",
+  "user_name": "张三",
+  "gender": "男",
+  "age": 30
+}
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| phone | string | 是 | 手机号（唯一标识） |
+| password | string | 是 | 密码（明文，后端自动哈希存储） |
+| user_name | string | 是 | 用户昵称/姓名 |
+| gender | string | 否 | 性别: 男/女 |
+| age | int | 否 | 年龄 |
+
+**响应**:
+```json
+{
+  "code": 200,
+  "message": "注册成功",
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+    "expires_in": 7200,
+    "user_info": {
+      "patient_id": "pat_001",
+      "user_name": "张三",
+      "phone": "13800138000",
+      "gender": "男",
+      "age": 30,
+      "status": 1,
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  }
+}
+```
+
+---
+
+### 5. 医师登录
 
 **接口**: `POST /api/v1/common/auth/doctor/login`
 
@@ -164,9 +266,14 @@ Authorization: Bearer {access_token}
 ```json
 {
   "user_name": "doctor01",
-  "password_hash": "e10adc3949ba59abbe56e057f20f883e"
+  "password": "123456"
 }
 ```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_name | string | 是 | 医生用户名 |
+| password | string | 是 | 密码（明文，后端自动哈希验证） |
 
 **响应**:
 ```json
@@ -183,7 +290,9 @@ Authorization: Bearer {access_token}
       "phone": "13900139000",
       "department": "内科",
       "title": "主任医师",
+      "hospital": "XX人民医院",
       "is_first_login": false,
+      "status": 1,
       "created_at": "2024-01-01T00:00:00Z"
     }
   }
@@ -192,7 +301,60 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 4. 管理员登录
+### 6. 医师注册
+
+**接口**: `POST /api/v1/common/auth/doctor/register`
+
+**描述**: 医师账号注册
+
+**请求体**:
+```json
+{
+  "user_name": "doctor01",
+  "password": "123456",
+  "phone": "13900139000",
+  "department": "内科",
+  "title": "主治医师",
+  "hospital": "XX人民医院"
+}
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_name | string | 是 | 用户名（唯一标识） |
+| password | string | 是 | 密码（明文，后端自动哈希存储） |
+| phone | string | 是 | 手机号 |
+| department | string | 否 | 所属科室 |
+| title | string | 否 | 职称 |
+| hospital | string | 否 | 所属医院 |
+
+**响应**:
+```json
+{
+  "code": 200,
+  "message": "注册成功",
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+    "expires_in": 7200,
+    "user_info": {
+      "doctor_id": "doc_001",
+      "user_name": "doctor01",
+      "phone": "13900139000",
+      "department": "内科",
+      "title": "主治医师",
+      "hospital": "XX人民医院",
+      "is_first_login": true,
+      "status": 1,
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  }
+}
+```
+
+---
+
+### 7. 管理员登录
 
 **接口**: `POST /api/v1/common/auth/admin/login`
 
@@ -202,9 +364,14 @@ Authorization: Bearer {access_token}
 ```json
 {
   "user_name": "admin",
-  "password_hash": "e10adc3949ba59abbe56e057f20f883e"
+  "password": "admin123"
 }
 ```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_name | string | 是 | 管理员用户名 |
+| password | string | 是 | 密码（明文，后端自动哈希验证） |
 
 **响应**:
 ```json
@@ -218,6 +385,7 @@ Authorization: Bearer {access_token}
     "user_info": {
       "admin_id": "adm_001",
       "user_name": "管理员",
+      "phone": "13800000000",
       "role_level": 1,
       "status": 1,
       "created_at": "2024-01-01T00:00:00Z"
@@ -228,7 +396,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 5. 刷新Token
+### 8. 刷新Token
 
 **接口**: `POST /api/v1/common/auth/token/refresh`
 
@@ -255,7 +423,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 6. 登出
+### 9. 登出
 
 **接口**: `POST /api/v1/common/auth/logout`
 
@@ -274,7 +442,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 7. 修改密码
+### 10. 修改密码
 
 **接口**: `PUT /api/v1/common/auth/password`
 
@@ -285,10 +453,15 @@ Authorization: Bearer {access_token}
 **请求体**:
 ```json
 {
-  "old_password_hash": "e10adc3949ba59abbe56e057f20f883e",
-  "new_password_hash": "e10adc3949ba59abbe56e057f20f883f"
+  "old_password": "123456",
+  "new_password": "654321"
 }
 ```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| old_password | string | 是 | 原密码（明文） |
+| new_password | string | 是 | 新密码（明文） |
 
 **响应**:
 ```json

@@ -44,9 +44,31 @@
 
     <!-- Graph Browse -->
     <div v-if="activeTab === 'graph'" class="flex flex-col gap-4">
-      <div class="flex gap-2"><input v-model="entityKeyword" @keydown.enter="searchEntities" class="flex-1 h-12 px-4 rounded-lg border border-outline-variant bg-surface text-sm" placeholder="搜索医疗实体" /><select v-model="entityType" class="h-12 px-3 rounded-lg border border-outline-variant bg-surface text-sm"><option value="">全部</option><option value="disease">疾病</option><option value="symptom">症状</option><option value="drug">药品</option></select><button @click="searchEntities" class="h-12 px-6 rounded-lg bg-primary text-on-primary text-sm shadow-md">搜索</button></div>
-      <div class="space-y-2"><div v-for="e in entityResults" :key="e.entity_id" @click="loadGraph(e.name)" class="flex justify-between items-center p-3 rounded-lg bg-surface-container-lowest border hover:bg-surface-container transition-colors cursor-pointer"><div><span class="px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary mr-2">{{ e.type }}</span><span class="text-sm font-medium">{{ e.name }}</span></div><span class="material-symbols-outlined text-outline">chevron_right</span></div></div>
-      <div class="bg-slate-800 rounded-xl min-h-[300px] flex items-center justify-center p-6"><div v-if="graphNodes.length" class="flex flex-wrap gap-3 justify-center"><div v-for="n in graphNodes" :key="n.id" :class="['w-20 h-20 rounded-full border-2 flex items-center justify-center text-center p-1 cursor-pointer hover:scale-110 transition-transform', nodeColors[n.type]||'border-gray-400 bg-gray-800/50']" :title="n.description"><span class="text-[10px] text-white leading-tight">{{ n.name }}</span></div></div><p v-else class="text-white/50">搜索实体浏览图谱</p></div>
+      <div class="flex gap-2">
+        <input v-model="entityKeyword" @keydown.enter="searchEntities" class="flex-1 h-12 px-4 rounded-lg border border-outline-variant bg-surface text-sm" placeholder="搜索疾病名称，如：感冒、高血压、糖尿病" />
+        <select v-model="entityType" class="h-12 px-3 rounded-lg border border-outline-variant bg-surface text-sm"><option value="">全部</option><option value="disease">疾病</option><option value="symptom">症状</option><option value="drug">药品</option></select>
+        <button @click="searchEntities" class="h-12 px-6 rounded-lg bg-primary text-on-primary text-sm shadow-md">搜索</button>
+      </div>
+      <!-- Entity search results → click to load graph -->
+      <div v-if="entityResults.length" class="space-y-1 max-h-48 overflow-y-auto">
+        <div v-for="e in entityResults" :key="e.entity_id" @click="loadFullGraph(e.name)" class="flex justify-between items-center p-2.5 rounded-lg bg-surface-container-lowest border hover:bg-primary/5 transition-colors cursor-pointer">
+          <div>
+            <span class="px-2 py-0.5 rounded-full text-xs mr-2" :class="typeBadgeClass(e.type)">{{ typeLabel(e.type) }}</span>
+            <span class="text-sm font-medium">{{ e.name }}</span>
+          </div>
+          <span class="material-symbols-outlined text-outline text-sm">account_tree</span>
+        </div>
+      </div>
+      <!-- D3 力导向知识图谱 -->
+      <div class="bg-slate-900 rounded-xl min-h-[400px] flex-1 overflow-hidden relative">
+        <KnowledgeGraphCanvas v-if="graphData" :graphData="graphData" @nodeClick="onGraphNodeClick" />
+        <div v-else class="h-full flex items-center justify-center">
+          <div class="text-center text-white/40">
+            <span class="material-symbols-outlined text-5xl mb-3 block">account_tree</span>
+            <p>搜索疾病名称，点击结果加载交互式知识图谱</p>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Feedback -->
@@ -73,20 +95,54 @@
 import { ref, reactive, onMounted } from 'vue'
 import { doctorApi } from '@/api/doctor'
 import { commonApi } from '@/api/common'
+import KnowledgeGraphCanvas from '@/components/graph/KnowledgeGraphCanvas.vue'
 
 const activeTab = ref('knowledge'); const tabs = [{key:'knowledge',label:'知识检索'},{key:'drugs',label:'药品相互作用'},{key:'graph',label:'知识图谱浏览'},{key:'feedback',label:'知识反馈'}]
 const typeMap: Record<string,string> = {knowledge_error:'知识错误',content_missing:'内容缺失',optimization:'优化建议',other:'其他'}
-const nodeColors: Record<string,string> = {disease:'border-blue-400 bg-blue-900/50',symptom:'border-red-400 bg-red-900/50',drug:'border-emerald-400 bg-emerald-900/50',department:'border-purple-400 bg-purple-900/50'}
 const kqQuery = ref(''); const kqType = ref(''); const kqResults = ref<any[]>([])
 const drugInput = ref(''); const drugList = ref<string[]>([]); const drugResults = ref<any[]>([])
-const entityKeyword = ref(''); const entityType = ref(''); const entityResults = ref<any[]>([]); const graphNodes = ref<any[]>([])
+const entityKeyword = ref(''); const entityType = ref(''); const entityResults = ref<any[]>([])
+const graphData = ref<any>(null)
 const fb = reactive({type:'knowledge_error',title:'',content:'',corrected_content:''}); const fbList = ref<any[]>([])
+
+function typeBadgeClass(type: string) {
+  const m: Record<string,string> = {disease:'bg-blue-100 text-blue-700',symptom:'bg-red-100 text-red-700',drug:'bg-emerald-100 text-emerald-700',department:'bg-purple-100 text-purple-700'}
+  return m[type?.toLowerCase()] || 'bg-gray-100 text-gray-600'
+}
+function typeLabel(type: string) {
+  const m: Record<string,string> = {disease:'疾病',symptom:'症状',drug:'药品',department:'科室',check:'检查',food:'食物'}
+  return m[type] || type
+}
 
 async function searchKnowledge() { if (!kqQuery.value) return; try { const res = await doctorApi.queryKnowledge(kqQuery.value, kqType.value||undefined); if (res.code===200) kqResults.value = res.data.results||[] } catch {} }
 function addDrug() { const v = drugInput.value.trim(); if (v && !drugList.value.includes(v)) drugList.value.push(v); drugInput.value = '' }
 async function checkInteractions() { try { const res = await doctorApi.checkDrugInteraction(undefined, drugList.value); if (res.code===200) drugResults.value = res.data.interactions||[] } catch {} }
-async function searchEntities() { if (!entityKeyword.value) return; try { const res = await commonApi.searchEntities(entityKeyword.value, entityType.value||undefined); if (res.code===200) entityResults.value = res.data||[] } catch {} }
-async function loadGraph(name: string) { try { const res = await commonApi.getDiseaseGraph(name); if (res.code===200) graphNodes.value = res.data.nodes||[] } catch {} }
+
+async function searchEntities() {
+  if (!entityKeyword.value) return
+  try {
+    const res = await commonApi.searchEntities(entityKeyword.value, entityType.value||undefined)
+    if (res.code === 200) {
+      // API returns { total, entities } — unwrap
+      const entities = (res.data as any)?.entities || res.data || []
+      entityResults.value = entities
+    }
+  } catch {}
+}
+
+async function loadFullGraph(name: string) {
+  try {
+    const res = await commonApi.getDiseaseGraph(name, 2)
+    if (res.code === 200 && res.data) {
+      graphData.value = res.data
+    }
+  } catch {}
+}
+
+function onGraphNodeClick(node: any) {
+  loadFullGraph(node.name)
+}
+
 async function submitFb() { if (!fb.title || !fb.content) { alert('请填写标题和内容'); return }; try { await doctorApi.submitFeedback(fb); alert('提交成功'); fb.title=''; fb.content=''; loadFbList() } catch (e: any) { alert('提交失败: '+e.message) } }
 async function loadFbList() { try { const res = await doctorApi.getFeedbackList(); if (res.code===200) fbList.value = res.data.list } catch {} }
 onMounted(loadFbList)

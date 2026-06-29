@@ -120,6 +120,11 @@ class FeedbackCreate(BaseModel):
     is_accurate: Optional[bool] = None
     corrected_answer: Optional[str] = None
     content: str
+    type: Optional[str] = None
+    related_entity_id: Optional[str] = None
+    related_query_id: Optional[str] = None
+    title: Optional[str] = None
+    references: Optional[List[str]] = None
 
 
 class DoctorFeedbackCreate(BaseModel):

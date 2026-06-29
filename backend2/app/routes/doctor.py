@@ -12,6 +12,7 @@ from app.schemas import (
 )
 from app.utils import generate_id, list_to_json_str, json_str_to_list, json_str_to_dict
 from app.dependencies import get_doctor_user
+from app.services.ai_service import inference
 
 router = APIRouter(prefix="/api/v1/doctor", tags=["doctor"])
 
@@ -105,18 +106,23 @@ def send_case_message(conversation_id: str, content: str, current_user: dict = D
     )
     db.add(user_message)
     db.commit()
-    
+
+    # 调用 AI 推理管线（医师视角）
+    result = inference(content, role="doctor")
+
+    reasoning_path = ["关键词提取", "知识图谱检索", "AI临床分析"] if result["is_ai_generated"] else ["关键词提取", "知识图谱检索"]
+
     assistant_message = Message(
         message_id=generate_id("msg_"),
         conversation_id=conversation_id,
         sender_role="assistant",
-        content=f"收到您的输入：{content}。正在进行专业分析...",
-        reasoning_path='["信息解析", "知识图谱检索", "专业分析"]',
-        answer_source="rag"
+        content=result["answer"],
+        reasoning_path=list_to_json_str(reasoning_path),
+        answer_source="ai+kb" if result["is_ai_generated"] else "kb"
     )
     db.add(assistant_message)
     db.commit()
-    
+
     return ResponseModel(data={
         "message_id": user_message.message_id,
         "role": "user",
@@ -126,7 +132,7 @@ def send_case_message(conversation_id: str, content: str, current_user: dict = D
             "message_id": assistant_message.message_id,
             "role": "assistant",
             "content": assistant_message.content,
-            "reasoning_path": ["信息解析", "知识图谱检索", "专业分析"],
+            "reasoning_path": reasoning_path,
             "answer_source": assistant_message.answer_source,
             "created_at": assistant_message.created_at
         }
@@ -244,65 +250,85 @@ def analyze_multi_symptom(request: MultiSymptomAnalyzeRequest, current_user: dic
                         disease_info["related_drugs"].append({"name": target.name, "entity_id": target.entity_id})
             analysis_results.append(disease_info)
     
+    # 用 AI 进行多疾病关联分析
+    if analysis_results:
+        disease_list = [d['disease_name'] for d in analysis_results]
+        query = f"请对以下疾病进行多症状关联分析：{'、'.join(disease_list)}"
+        if request.symptoms:
+            query += f"；共同症状：{'、'.join(request.symptoms)}"
+        ai_result = inference(query, role="doctor")
+        correlation = ai_result.get("answer", "")
+    else:
+        correlation = "未在知识库中找到匹配的疾病信息，无法进行关联分析"
+
     return ResponseModel(data={
         "analysis_depth": request.analysis_depth,
         "results": analysis_results,
-        "correlation_analysis": "多症状关联分析结果：各疾病之间存在一定的关联，建议综合考虑"
+        "correlation_analysis": correlation[:200] if len(correlation) > 200 else correlation,
+        "ai_full_analysis": correlation
     })
 
 
 @router.post("/consultation/differential-diagnosis", response_model=ResponseModel)
 def differential_diagnosis(request: DifferentialDiagnosisRequest, current_user: dict = Depends(get_doctor_user)):
+    # 组装临床Query
+    query_parts = [f"主诉：{request.chief_complaint}"]
+    if request.symptoms:
+        query_parts.append(f"症状：{'、'.join(request.symptoms)}")
+    if request.patient_info:
+        info = request.patient_info
+        if info.get("age"): query_parts.append(f"年龄：{info['age']}岁")
+        if info.get("gender"): query_parts.append(f"性别：{info['gender']}")
+    if request.exam_results:
+        query_parts.append(f"检查结果：{json.dumps(request.exam_results, ensure_ascii=False)}")
+
+    query = "；".join(query_parts) + "。请给出鉴别诊断分析。"
+
+    result = inference(query, role="doctor")
+
+    # 从知识图谱提取疾病列表
+    disease_matches = [k for k in result.get("knowledge", []) if k.get("type") == "Disease"]
+    differential_list = []
+    for i, d in enumerate(disease_matches[:5]):
+        differential_list.append({
+            "disease_id": d["entity_id"],
+            "disease_name": d["name"],
+            "probability": round(0.85 - i * 0.15, 2),
+            "supporting_symptoms": [r["target_name"] for r in d.get("related", []) if r.get("target_type") == "Symptom"][:3],
+            "conflicting_symptoms": [],
+            "typical_onset": d.get("cause", "")[:50] if d.get("cause") else "",
+            "key_examination": d.get("description", "")[:80] if d.get("description") else "",
+            "treatment_principle": ""
+        })
+
+    # 判断有无高危疾病（从关键词中检测）
+    emergency_keywords = ["心梗", "脑出血", "主动脉夹层", "肺栓塞", "急性", "危重"]
+    has_emergency = any(kw in result.get("answer", "") for kw in emergency_keywords)
+
     return ResponseModel(data={
-        "differential_list": [
-            {
-                "disease_id": "ent_001",
-                "disease_name": "偏头痛",
-                "probability": 0.78,
-                "supporting_symptoms": ["头痛", "恶心", "对光敏感"],
-                "conflicting_symptoms": [],
-                "typical_onset": "青春期",
-                "key_examination": "头颅MRI排除器质性病变",
-                "treatment_principle": "药物治疗+生活方式调整"
-            },
-            {
-                "disease_id": "ent_002",
-                "disease_name": "紧张性头痛",
-                "probability": 0.55,
-                "supporting_symptoms": ["头痛", "颈部肌肉紧张"],
-                "conflicting_symptoms": ["恶心"],
-                "typical_onset": "成年期",
-                "key_examination": "排除其他头痛类型",
-                "treatment_principle": "放松训练+药物治疗"
-            },
-            {
-                "disease_id": "ent_003",
-                "disease_name": "脑血管疾病",
-                "probability": 0.15,
-                "supporting_symptoms": ["头痛"],
-                "conflicting_symptoms": ["无神经系统定位体征"],
-                "typical_onset": "中老年",
-                "key_examination": "头颅CT/MRI",
-                "treatment_principle": "急性期溶栓/取栓"
-            }
-        ],
-        "recommended_next_step": "建议完善头颅MRI检查，神经内科门诊就诊",
-        "high_risk_diseases": [],
-        "emergency_flag": False
+        "differential_list": differential_list,
+        "ai_analysis": result["answer"],
+        "recommended_next_step": "建议结合临床表现和辅助检查进一步明确诊断",
+        "high_risk_diseases": [d for d in differential_list if d["probability"] > 0.7][:2],
+        "emergency_flag": has_emergency
     })
 
 
 @router.post("/knowledge/query", response_model=ResponseModel)
 def query_knowledge(request: KnowledgeQueryRequest, current_user: dict = Depends(get_doctor_user), db: Session = Depends(get_db)):
+    # 先用知识图谱搜索
     entities = db.query(MedicalEntity).filter(MedicalEntity.name.like(f"%{request.query}%")).limit(5).all()
+
+    # 同时调用 AI 语义分析
+    ai_result = inference(request.query, role="doctor")
+
     results = []
-    
     for entity in entities:
         relations = db.query(MedicalRelation).filter(
             (MedicalRelation.source_entity_id == entity.entity_id) |
             (MedicalRelation.target_entity_id == entity.entity_id)
         ).limit(10).all()
-        
+
         result_item = {
             "entity_id": entity.entity_id,
             "name": entity.name,
@@ -311,7 +337,7 @@ def query_knowledge(request: KnowledgeQueryRequest, current_user: dict = Depends
             "attributes": json_str_to_dict(entity.attributes),
             "related_entities": []
         }
-        
+
         for rel in relations:
             target = db.query(MedicalEntity).filter(MedicalEntity.entity_id == rel.target_entity_id).first()
             if target:
@@ -321,9 +347,9 @@ def query_knowledge(request: KnowledgeQueryRequest, current_user: dict = Depends
                     "relation_type": rel.relation_type,
                     "relation_name": rel.relation_name
                 })
-        
+
         results.append(result_item)
-    
+
     if not results:
         results.append({
             "entity_id": None,
@@ -333,9 +359,11 @@ def query_knowledge(request: KnowledgeQueryRequest, current_user: dict = Depends
             "attributes": {},
             "related_entities": []
         })
-    
+
     return ResponseModel(data={
         "results": results,
+        "ai_analysis": ai_result.get("answer", ""),
+        "ai_keywords": ai_result.get("keywords", []),
         "query_type": request.query_type,
         "context": request.context
     })
@@ -445,5 +473,5 @@ def get_doctor_feedback_list(status: str = None, page: int = 1, page_size: int =
             "resolved_at": fb.resolved_at,
             "created_at": fb.created_at
         })
-    
+
     return ResponseModel(data={"list": result, "page": page, "page_size": page_size, "total": total})
