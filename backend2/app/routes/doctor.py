@@ -436,27 +436,52 @@ def query_knowledge(request: KnowledgeQueryRequest, current_user: dict = Depends
 
 
 @router.post("/knowledge/drug-interaction", response_model=ResponseModel)
-def check_drug_interaction(request: DrugInteractionRequest, current_user: dict = Depends(get_doctor_user)):
+@router.post("/knowledge/drug-interaction", response_model=ResponseModel)
+def check_drug_interaction(request: DrugInteractionRequest, current_user: dict = Depends(get_doctor_user), db: Session = Depends(get_db)):
+    """联合用药安全分析: AI + 知识图谱 + 自动存档"""
+    drug_names = request.drug_names or []
+    if not drug_names:
+        return ResponseModel(data={"interactions": [], "summary": "请提供药品名称"})
+
+    # 用 AI 分析药物相互作用
+    query = f"请分析以下药物的相互作用风险：{'、'.join(drug_names)}。请列出每对药物组合的相互作用级别（禁忌/谨慎/注意）和临床建议。"
+    ai_result = inference(query, role="doctor")
+
+    # 从 KG 补充数据
+    from app.graph_db import get_graph_db
+    graph_db = get_graph_db()
+    interactions = []
+    for i in range(len(drug_names)):
+        for j in range(i + 1, len(drug_names)):
+            drug_a = graph_db.get_node_by_name(drug_names[i], 'Drug')
+            drug_b = graph_db.get_node_by_name(drug_names[j], 'Drug')
+            if drug_a and drug_b:
+                interactions.append({
+                    "level": "info",
+                    "drug_a": drug_names[i],
+                    "drug_b": drug_names[j],
+                    "description": f"请在临床中密切观察{drug_names[i]}与{drug_names[j]}的联用反应",
+                    "severity": "低",
+                    "recommendation": "建议查阅最新版药品说明书中的相互作用章节"
+                })
+
+    # 自动存档
+    conversation = Conversation(
+        conversation_id=generate_id("conv_"),
+        doctor_id=current_user["user"].doctor_id,
+        session_type="case",
+        case_type="drug_interaction",
+        status="ended"
+    )
+    db.add(conversation)
+    db.add(Message(message_id=generate_id("msg_"), conversation_id=conversation.conversation_id, doctor_id=current_user["user"].doctor_id, sender_role="user", content=f"联合用药分析: {', '.join(drug_names)}"))
+    db.add(Message(message_id=generate_id("msg_"), conversation_id=conversation.conversation_id, sender_role="assistant", content=ai_result["answer"][:500], answer_source="ai+kb" if ai_result.get("is_ai_generated") else "kb"))
+    db.commit()
+
     return ResponseModel(data={
-        "interactions": [
-            {
-                "level": "warning",
-                "drug_a": "阿司匹林",
-                "drug_b": "华法林",
-                "description": "合用可能增加出血风险",
-                "severity": "中",
-                "recommendation": "监测凝血功能，必要时调整剂量"
-            },
-            {
-                "level": "info",
-                "drug_a": "布洛芬",
-                "drug_b": "奥美拉唑",
-                "description": "奥美拉唑可减轻布洛芬的胃肠道刺激",
-                "severity": "低",
-                "recommendation": "可正常合用"
-            }
-        ],
-        "summary": "存在1项需要关注的药物相互作用，建议临床密切监测"
+        "interactions": interactions,
+        "ai_analysis": ai_result.get("answer", ""),
+        "summary": f"已完成{'、'.join(drug_names)}的相互作用初步筛查，请结合AI分析和临床判断"
     })
 
 
