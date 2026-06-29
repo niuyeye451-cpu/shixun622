@@ -1,5 +1,5 @@
 <template>
-  <div class="p-[16px] md:p-[40px] max-w-[1600px] mx-auto">
+  <div class="h-full w-full flex flex-col overflow-y-auto p-[16px] md:p-[24px]">
     <h1 class="text-2xl md:text-3xl font-bold mb-6">系统设置</h1>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="bg-surface-container-lowest rounded-xl border p-6">

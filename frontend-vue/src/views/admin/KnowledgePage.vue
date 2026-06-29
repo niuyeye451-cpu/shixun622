@@ -1,5 +1,5 @@
 <template>
-  <div class="p-[16px] md:p-[40px] max-w-[1600px] mx-auto">
+  <div class="h-full w-full flex flex-col overflow-y-auto p-[16px] md:p-[24px]">
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl md:text-3xl font-bold">知识库管理</h1>
       <button @click="openCreateEntity" class="bg-primary text-on-primary px-6 py-3 rounded-lg text-sm font-medium shadow-md flex items-center gap-1 hover:bg-primary/90">

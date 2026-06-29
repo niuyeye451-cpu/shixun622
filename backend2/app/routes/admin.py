@@ -16,6 +16,7 @@ from app.schemas import (
 )
 from app.utils import generate_id, list_to_json_str, json_str_to_list, json_str_to_dict, dict_to_json_str, get_password_hash
 from app.dependencies import get_admin_user
+from app.graph_db import get_graph_db
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
@@ -267,51 +268,71 @@ def create_medical_entity(request: MedicalEntityCreate, current_user: dict = Dep
 
 @router.get("/knowledge/entities", response_model=ResponseModel)
 def get_entity_list(entity_type: str = None, keyword: str = None, status: str = None, page: int = 1, page_size: int = 10, current_user: dict = Depends(get_admin_user), db: Session = Depends(get_db)):
-    query = db.query(MedicalEntity)
-    if entity_type:
-        query = query.filter(MedicalEntity.type == entity_type)
+    # 从图数据库查询实体（数据在 graph.db 中，不在空 SQLite 表中）
+    graph_db = get_graph_db()
+
+    # Type mapping: frontend sends lowercase, graph uses Capitalized
+    type_map = {
+        "disease": "Disease", "symptom": "Symptom", "drug": "Drug",
+        "check": "Check", "department": "Department", "cure_way": "CureWay",
+        "food": "Food", "producer": "Producer"
+    }
+    graph_label = type_map.get(entity_type.lower()) if entity_type else None
+
     if keyword:
-        query = query.filter(MedicalEntity.name.like(f"%{keyword}%"))
-    if status:
-        query = query.filter(MedicalEntity.status == status)
-    
-    total = query.count()
-    entities = query.order_by(MedicalEntity.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
-    
+        all_entities = graph_db.search_nodes(keyword, graph_label, limit=500)
+    elif graph_label:
+        all_entities = graph_db.get_nodes_by_label(graph_label, limit=500)
+    else:
+        # 获取所有类型的实体
+        all_entities = []
+        for label in type_map.values():
+            all_entities.extend(graph_db.get_nodes_by_label(label, limit=100))
+
+    total = len(all_entities)
+    # 简单分页
+    start = (page - 1) * page_size
+    paged = all_entities[start:start + page_size]
+
     result = []
-    for entity in entities:
+    for entity in paged:
+        props = entity.get('properties', {})
+        aliases = props.get('alias', []) if isinstance(props, dict) else []
         result.append({
-            "entity_id": entity.entity_id,
-            "name": entity.name,
-            "type": entity.type,
-            "aliases": json_str_to_list(entity.aliases),
-            "description": entity.description,
-            "status": entity.status,
-            "version_number": entity.version_number,
-            "created_at": entity.created_at
+            "entity_id": entity['id'],
+            "name": entity['name'],
+            "type": entity.get('label', ''),
+            "aliases": aliases if isinstance(aliases, list) else [],
+            "description": (props.get('desc', '') if isinstance(props, dict) else '')[:200],
+            "status": "published",
+            "version_number": "v1",
+            "created_at": ""
         })
-    
+
     return ResponseModel(data={"list": result, "page": page, "page_size": page_size, "total": total})
 
 
 @router.get("/knowledge/entities/{entity_id}", response_model=ResponseModel)
 def get_entity_detail(entity_id: str, current_user: dict = Depends(get_admin_user), db: Session = Depends(get_db)):
-    entity = db.query(MedicalEntity).filter(MedicalEntity.entity_id == entity_id).first()
+    graph_db = get_graph_db()
+    entity = graph_db.get_node_by_id(entity_id)
     if not entity:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="实体不存在")
-    
+
+    props = entity.get('properties', {})
+    aliases = props.get('alias', []) if isinstance(props, dict) else []
     return ResponseModel(data={
-        "entity_id": entity.entity_id,
-        "name": entity.name,
-        "type": entity.type,
-        "aliases": json_str_to_list(entity.aliases),
-        "description": entity.description,
-        "attributes": json_str_to_dict(entity.attributes),
-        "source_version": entity.source_version,
-        "version_number": entity.version_number,
-        "status": entity.status,
-        "created_at": entity.created_at,
-        "updated_at": entity.updated_at
+        "entity_id": entity['id'],
+        "name": entity['name'],
+        "type": entity.get('label', ''),
+        "aliases": aliases if isinstance(aliases, list) else [],
+        "description": (props.get('desc', '') if isinstance(props, dict) else '')[:500],
+        "attributes": props if isinstance(props, dict) else {},
+        "source_version": "v1",
+        "version_number": "v1",
+        "status": "published",
+        "created_at": "",
+        "updated_at": ""
     })
 
 
@@ -756,8 +777,10 @@ def get_dashboard_stats(current_user: dict = Depends(get_admin_user), db: Sessio
     patient_count = db.query(Patient).count()
     doctor_count = db.query(Doctor).count()
     admin_count = db.query(Admin).count()
-    entity_count = db.query(MedicalEntity).count()
-    relation_count = db.query(MedicalRelation).count()
+    graph_db = get_graph_db()
+    kg_stats = graph_db.get_statistics()
+    entity_count = kg_stats.get('total_nodes', 0)
+    relation_count = kg_stats.get('total_relationships', 0)
     feedback_count = db.query(Feedback).filter(Feedback.status == "pending").count()
     unknown_count = db.query(UnknownQuestion).filter(UnknownQuestion.status == "pending").count()
     
@@ -811,13 +834,18 @@ def get_feedback_stats(start_date: str, end_date: str, current_user: dict = Depe
 
 @router.get("/statistics/knowledge", response_model=ResponseModel)
 def get_knowledge_stats(current_user: dict = Depends(get_admin_user), db: Session = Depends(get_db)):
-    entity_stats = db.query(MedicalEntity.type, db.func.count(MedicalEntity.entity_id)).group_by(MedicalEntity.type).all()
-    type_counts = {row[0]: row[1] for row in entity_stats}
-    
+    graph_db = get_graph_db()
+    stats = graph_db.get_statistics()
+
+    type_counts = {}
+    for item in stats.get('label_distribution', []):
+        if isinstance(item, dict):
+            type_counts[item.get('label', 'unknown')] = item.get('count', 0)
+
     return ResponseModel(data={
-        "total_entities": db.query(MedicalEntity).count(),
-        "total_relations": db.query(MedicalRelation).count(),
-        "total_synonyms": db.query(Synonym).count(),
-        "total_versions": db.query(KnowledgeVersion).count(),
+        "total_entities": stats.get('total_nodes', 0),
+        "total_relations": stats.get('total_relationships', 0),
+        "total_synonyms": 0,
+        "total_versions": 0,
         "by_type": type_counts
     })

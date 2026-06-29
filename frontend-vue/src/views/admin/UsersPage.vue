@@ -1,5 +1,5 @@
 <template>
-  <div class="p-[16px] md:p-[40px] max-w-[1600px] mx-auto">
+  <div class="h-full w-full flex flex-col overflow-y-auto p-[16px] md:p-[24px]">
     <h1 class="text-[24px] md:text-[32px] font-semibold text-on-background mb-[24px]">用户管理</h1>
     <div class="flex gap-2 mb-[24px] border-b border-outline-variant overflow-x-auto">
       <button v-for="t in tabs" :key="t.key" @click="activeTab=t.key" :class="['px-4 py-2 rounded-t-lg text-sm font-medium border-b-2 transition-colors', activeTab===t.key?'border-primary text-primary bg-surface-container-lowest':'border-transparent text-on-surface-variant']">{{ t.label }}</button>

@@ -1,5 +1,5 @@
 <template>
-  <div class="p-[16px] md:p-[40px] max-w-[1600px] mx-auto">
+  <div class="h-full w-full flex flex-col overflow-y-auto p-[16px] md:p-[24px]">
     <h1 class="text-[24px] md:text-[32px] font-semibold text-on-background mb-[24px]">反馈管理</h1>
     <div class="bg-surface-container-lowest rounded-xl border overflow-hidden">
       <div class="p-3 border-b flex gap-2">

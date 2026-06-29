@@ -1,5 +1,5 @@
 <template>
-  <div class="p-[16px] md:p-[40px] max-w-[1600px] mx-auto">
+  <div class="h-full w-full flex flex-col overflow-y-auto p-[16px] md:p-[24px]">
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl md:text-3xl font-bold">管理仪表盘</h1>
     </div>
