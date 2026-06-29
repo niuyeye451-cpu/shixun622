@@ -26,27 +26,40 @@
         </tr>
       </tbody></table>
       <!-- Pagination -->
-      <div class="flex items-center justify-between p-3 border-t bg-surface/50" v-if="entityTotal > 20">
+      <div class="flex items-center justify-between p-3 border-t bg-surface/50">
         <span class="text-xs text-on-surface-variant">共 {{ entityTotal }} 条</span>
         <div class="flex gap-1">
-          <button @click="goPage(entityPage-1)" :disabled="entityPage<=1" class="px-3 py-1 rounded border text-xs disabled:opacity-30">上一页</button>
-          <span class="px-3 py-1 text-xs text-on-surface-variant">{{ entityPage }} / {{ Math.ceil(entityTotal/20) }}</span>
-          <button @click="goPage(entityPage+1)" :disabled="entityPage>=Math.ceil(entityTotal/20)" class="px-3 py-1 rounded border text-xs disabled:opacity-30">下一页</button>
+          <button @click="goPage(entityPage-1)" :disabled="entityPage<=1" class="px-3 py-1 rounded border text-xs disabled:opacity-30 hover:bg-surface-container transition-colors">上一页</button>
+          <span class="px-3 py-1 text-xs text-on-surface-variant">{{ entityPage }} / {{ Math.max(1, Math.ceil(entityTotal/20)) }}</span>
+          <button @click="goPage(entityPage+1)" :disabled="entityPage>=Math.ceil(entityTotal/20)" class="px-3 py-1 rounded border text-xs disabled:opacity-30 hover:bg-surface-container transition-colors">下一页</button>
         </div>
       </div>
     </div>
 
     <!-- Relations -->
     <div v-if="activeTab==='relations'" class="bg-surface-container-lowest rounded-xl border overflow-hidden">
-      <div class="p-3 border-b flex justify-between"><select v-model="relType" @change="loadRelations" class="h-10 px-3 rounded-lg border border-outline-variant bg-surface text-sm"><option value="">全部</option><option value="has_symptom">有症状</option><option value="belongs_to_department">属于科室</option><option value="treat_with_drug">用药物治疗</option><option value="complication">并发症</option><option value="contraindication">禁忌症</option></select><button @click="openCreateRelation" class="h-10 px-4 rounded-lg bg-primary text-on-primary text-xs">新增关系</button></div>
-      <table class="w-full text-sm"><thead><tr class="bg-surface border-b"><th class="p-3 text-xs uppercase">源实体</th><th class="p-3 text-xs uppercase">关系</th><th class="p-3 text-xs uppercase">目标实体</th><th class="p-3 text-xs uppercase">描述</th><th class="p-3 text-xs uppercase text-right">操作</th></tr></thead>
-      <tbody><tr v-if="relations.length===0"><td colspan="5" class="p-6 text-center">{{ loadingRelations ? '加载中...' : '暂无数据' }}</td></tr>
-        <tr v-for="r in relations" :key="r.relation_id" class="border-b hover:bg-surface-container/50">
-          <td class="p-3">{{ r.source_entity_name }}</td><td class="p-3"><span class="px-2 py-0.5 rounded-full text-xs bg-tertiary/10 text-tertiary">{{ r.relation_name||r.relation_type }}</span></td>
-          <td class="p-3">{{ r.target_entity_name }}</td><td class="p-3 text-xs text-on-surface-variant truncate max-w-[200px]">{{ r.text||'-' }}</td>
-          <td class="p-3 text-right"><button @click="delRelation(r.relation_id)" class="text-error text-xs">删除</button></td>
-        </tr>
-      </tbody></table>
+      <div class="p-3 border-b flex justify-between"><select v-model="relType" @change="store.entityPage=1;loadRelations()" class="h-10 px-3 rounded-lg border border-outline-variant bg-surface text-sm"><option value="">全部</option><option value="has_symptom">有症状</option><option value="belongs_to_dept">属于科室</option><option value="common_drug">常用药</option><option value="recommand_drug">推荐药</option><option value="need_check">需检查</option><option value="acompany_with">并发症</option><option value="produced_by">生产商</option></select><button @click="openCreateRelation" class="h-10 px-4 rounded-lg bg-primary text-on-primary text-xs">新增关系</button></div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm min-w-[700px]"><thead><tr class="bg-surface border-b"><th class="p-3 text-xs uppercase whitespace-nowrap">源实体</th><th class="p-3 text-xs uppercase whitespace-nowrap">关系</th><th class="p-3 text-xs uppercase whitespace-nowrap">目标实体</th><th class="p-3 text-xs uppercase whitespace-nowrap">描述</th><th class="p-3 text-xs uppercase text-right whitespace-nowrap">操作</th></tr></thead>
+        <tbody><tr v-if="relations.length===0"><td colspan="5" class="p-6 text-center">{{ loadingRelations ? '加载中...' : '暂无数据' }}</td></tr>
+          <tr v-for="r in relations" :key="r.relation_id" class="border-b hover:bg-surface-container/50">
+            <td class="p-3 whitespace-nowrap max-w-[180px] truncate">{{ r.source_entity_name }}</td>
+            <td class="p-3 whitespace-nowrap"><span class="px-2 py-0.5 rounded-full text-xs bg-tertiary/10 text-tertiary">{{ r.relation_name||r.relation_type }}</span></td>
+            <td class="p-3 whitespace-nowrap max-w-[180px] truncate">{{ r.target_entity_name }}</td>
+            <td class="p-3 text-xs text-on-surface-variant whitespace-nowrap max-w-[160px] truncate">{{ r.text||'-' }}</td>
+            <td class="p-3 text-right whitespace-nowrap"><button @click="delRelation(r.relation_id)" class="text-error text-xs">删除</button></td>
+          </tr>
+        </tbody></table>
+      </div>
+      <!-- Relations Pagination -->
+      <div class="flex items-center justify-between p-3 border-t bg-surface/50">
+        <span class="text-xs text-on-surface-variant">共 {{ relationTotal }} 条</span>
+        <div class="flex gap-1">
+          <button @click="goRelPage(relPage-1)" :disabled="relPage<=1" class="px-3 py-1 rounded border text-xs disabled:opacity-30 hover:bg-surface-container">上一页</button>
+          <span class="px-3 py-1 text-xs text-on-surface-variant">{{ relPage }} / {{ Math.max(1, Math.ceil(relationTotal/10)) }}</span>
+          <button @click="goRelPage(relPage+1)" :disabled="relPage>=Math.ceil(relationTotal/10)" class="px-3 py-1 rounded border text-xs disabled:opacity-30 hover:bg-surface-container">下一页</button>
+        </div>
+      </div>
     </div>
 
     <!-- Synonyms -->
@@ -121,8 +134,10 @@ const loadingEntities = ref(false); const loadingRelations = ref(false)
 const entities = computed(() => store.entities); const relations = computed(() => store.relations)
 const synonyms = computed(() => store.synonyms); const versions = computed(() => store.versions)
 const entityPage = computed(() => store.entityPage); const entityTotal = computed(() => store.entityTotal)
+const relPage = ref(1); const relationTotal = ref(0)
 
 function goPage(p: number) { store.entityPage = p; loadEntities() }
+function goRelPage(p: number) { relPage.value = p; loadRelations() }
 
 async function loadEntities() {
   loadingEntities.value = true
@@ -131,7 +146,8 @@ async function loadEntities() {
 }
 async function loadRelations() {
   loadingRelations.value = true
-  await store.loadRelations({ relation_type: relType.value || undefined })
+  const res = await adminApi.getRelations({ page: relPage.value, page_size: 10, relation_type: relType.value || undefined })
+  if (res.code === 200) { store.relations = res.data.list; relationTotal.value = res.data.total }
   loadingRelations.value = false
 }
 async function loadSynonyms() { await store.loadSynonyms() }
