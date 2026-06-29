@@ -316,39 +316,41 @@ def differential_diagnosis(request: DifferentialDiagnosisRequest, current_user: 
 
 @router.post("/knowledge/query", response_model=ResponseModel)
 def query_knowledge(request: KnowledgeQueryRequest, current_user: dict = Depends(get_doctor_user), db: Session = Depends(get_db)):
-    # 先用知识图谱搜索
-    entities = db.query(MedicalEntity).filter(MedicalEntity.name.like(f"%{request.query}%")).limit(5).all()
+    """知识检索: 搜索图数据库 + AI 语义分析"""
+    from app.graph_db import get_graph_db
+    graph_db = get_graph_db()
+
+    # 从图数据库搜索实体（这才是数据所在处）
+    entities = graph_db.search_nodes(request.query, limit=10)
 
     # 同时调用 AI 语义分析
     ai_result = inference(request.query, role="doctor")
 
     results = []
     for entity in entities:
-        relations = db.query(MedicalRelation).filter(
-            (MedicalRelation.source_entity_id == entity.entity_id) |
-            (MedicalRelation.target_entity_id == entity.entity_id)
-        ).limit(10).all()
-
-        result_item = {
-            "entity_id": entity.entity_id,
-            "name": entity.name,
-            "type": entity.type,
-            "description": entity.description,
-            "attributes": json_str_to_dict(entity.attributes),
-            "related_entities": []
-        }
-
-        for rel in relations:
-            target = db.query(MedicalEntity).filter(MedicalEntity.entity_id == rel.target_entity_id).first()
+        props = entity.get('properties', {})
+        desc = props.get('desc', '') if isinstance(props, dict) else ''
+        # 获取关联关系
+        relations = graph_db.get_relations_by_node(entity['id'])
+        related = []
+        for rel in relations[:10]:
+            target = graph_db.get_node_by_id(rel.get('target_id', ''))
             if target:
-                result_item["related_entities"].append({
-                    "entity_id": target.entity_id,
-                    "name": target.name,
-                    "relation_type": rel.relation_type,
-                    "relation_name": rel.relation_name
+                related.append({
+                    "entity_id": target.get('id', ''),
+                    "name": target.get('name', ''),
+                    "relation_type": rel.get('relation_type', ''),
+                    "relation_name": rel.get('relation_name', '')
                 })
 
-        results.append(result_item)
+        results.append({
+            "entity_id": entity['id'],
+            "name": entity['name'],
+            "type": entity.get('label', 'Disease'),
+            "description": desc[:300] if desc else None,
+            "attributes": props,
+            "related_entities": related
+        })
 
     if not results:
         results.append({
